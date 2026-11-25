@@ -24,6 +24,9 @@ pub struct Service {
     pub outputs: Arc<OutputLayer>,
     threads: Mutex<Vec<JoinHandle<()>>>,
     pub httpd: Mutex<Option<crate::http::Server>>,
+    /// The machine the network tools read and change (tests answer for it). None: the
+    /// network tools are off, and their routes answer 501.
+    pub net_host: RwLock<Option<Arc<dyn crate::net::Host>>>,
 }
 
 pub const ISLAND_EVERY_S: f64 = 5.0;
@@ -70,6 +73,7 @@ impl Service {
             outputs,
             threads: Mutex::new(vec![]),
             httpd: Mutex::new(None),
+            net_host: RwLock::new(Some(Arc::new(crate::net::RealHost))),
         });
         svc.warn_double_publish();
         Ok(svc)
@@ -305,20 +309,33 @@ impl Service {
                "sensor_sees": self.sessions.iter().map(|s| json!({"session": s.id, "address": s.local_seen_as()})).collect::<Vec<_>>()})
     }
 
+    fn host(&self) -> Result<Arc<dyn crate::net::Host>, NetError> {
+        self.net_host
+            .read()
+            .unwrap_or_else(|e| e.into_inner())
+            .clone()
+            .ok_or_else(|| NetError::Unavailable("network tools are not installed (scapegoat net is off in this service)".into()))
+    }
+
     pub fn net_snapshot(&self) -> Result<Value, NetError> {
-        Err(NetError::Unavailable("network tools are not installed (scapegoat net is not in this build yet)".into()))
+        let raw = Value::Object(self.cfg().raw.clone());
+        Ok(crate::net::snapshot(self.host()?.as_ref(), &raw))
     }
 
     /// A read-only probe: ping, capture, udp_probe.
     pub fn net_probe(&self, name: &str, args: &Map<String, Value>) -> Result<Value, NetError> {
-        let _ = (name, args);
-        Err(NetError::Unavailable("network tools are not installed (scapegoat net is not in this build yet)".into()))
+        crate::net::probe(self.host()?.as_ref(), name, args).map_err(NetError::Invalid)
     }
 
     /// A guarded control; the caller has checked allow_net_control and confirm.
     pub fn net_run(&self, name: &str, args: &Map<String, Value>, source: &str) -> Result<Value, NetError> {
-        let _ = (name, args, source);
-        Err(NetError::Unavailable("network tools are not installed (scapegoat net is not in this build yet)".into()))
+        let host = self.host()?;
+        self.event("net", &format!("net {name} {}", crate::pyfmt::dumps_sorted(&Value::Object(args.clone()))), "info", source);
+        let raw = Value::Object(self.cfg().raw.clone());
+        let result = crate::net::run(host.as_ref(), name, args, &raw);
+        let shown = crate::pyfmt::head(&crate::pyfmt::dumps(&result), 400);
+        self.event("net", &format!("net {name} result: {shown}"), "info", source);
+        Ok(result)
     }
 }
 

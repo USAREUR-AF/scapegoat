@@ -144,13 +144,25 @@ mod api_tests {
 
     #[test]
     fn test_net_missing_module_is_clear_error() {
-        // Python removes scapegoat.net from sys.modules; this build has no network tools yet,
-        // so the same answers come back.
+        // Python removes scapegoat.net from sys.modules; here the service has no network host.
         let a = api(Opts::default());
+        *a.svc.net_host.write().unwrap() = None;
         let (code, r) = a.req("GET", "/api/net", None);
         assert_eq!(code, 501);
         assert!(r["error"].as_str().unwrap().contains("not installed"));
         assert_eq!(a.req("POST", "/api/net/ping", Some(json!({"ip": "127.0.0.1"}))).0, 501);
+    }
+
+    #[test]
+    fn test_net_snapshot_and_probe() {
+        // Python replaces scapegoat.net with stand-ins; here a fake host answers for the machine.
+        let a = api(Opts::default());
+        *a.svc.net_host.write().unwrap() = Some(Arc::new(crate::net::FakeHost::default_host()));
+        let (code, r) = a.req("GET", "/api/net", None);
+        assert_eq!(code, 200);
+        assert!(r["interfaces"].as_array().unwrap().iter().any(|i| i["name"] == "lo"));
+        let (code, r) = a.req("POST", "/api/net/ping", Some(json!({"ip": "127.0.0.1", "junk": 1})));
+        assert_eq!((code, r["ip"].clone()), (200, json!("127.0.0.1")));
     }
 
     #[test]
@@ -234,6 +246,20 @@ mod lock_and_address {
         assert!(out.contains("Node address: [OK]"), "{out}");
         assert!((out + " probing").contains("probing"));
     }
+}
+
+#[test]
+fn test_confirm_required_then_runs() {
+    let a = api(Opts { allow_net: true, ..Default::default() });
+    let host = Arc::new(crate::net::FakeHost::default_host());
+    *a.svc.net_host.write().unwrap() = Some(host.clone());
+    let (code, _) = a.req("POST", "/api/net/link_up", Some(json!({"iface": "eth0"})));
+    assert_eq!(code, 403);
+    assert!(host.calls().is_empty());
+    let (code, r) = a.req("POST", "/api/net/link_up", Some(json!({"iface": "eth0", "confirm": true})));
+    assert_eq!(code, 200, "{r}");
+    assert_eq!(host.calls()[0], ["ip", "link", "set", "dev", "eth0", "up"].map(String::from).to_vec());
+    assert!(a.svc.events_list().iter().any(|e| e["source"] == "ui"));
 }
 
 #[test]

@@ -13,6 +13,7 @@ pub mod destinations;
 pub mod http;
 pub mod ipnet;
 pub mod log;
+pub mod net;
 pub mod node;
 pub mod outputs;
 pub mod protocol;
