@@ -25,6 +25,8 @@ path = "tests/rust/main.rs"
 [dependencies]
 clap = { version = "4.5", default-features = false, features = ["std", "help", "usage", "error-context"] }
 getrandom = "=0.3.4"
+# The C2 outputs' encoder, in process. Packs and model are read from [transformers] path at run time.
+goat-transformers = { git = "https://github.com/USAREUR-AF/goat-transformers", rev = "792592130fc776dea5d54d153ac1b15cf364fd6c", default-features = false, features = ["json", "xml", "bits", "protobuf"] }
 libc = "0.2.191"
 serde_json = { version = "1.0.154", features = ["preserve_order"] }
 socket2 = "0.6"
@@ -36,3 +38,7 @@ lto = true
 codegen-units = 1
 panic = "abort"
 strip = true
+
+# The encoder loads the whole goat-transformers model in each output test: build it optimized.
+[profile.dev.package.goat-transformers]
+opt-level = 3
