@@ -5,6 +5,7 @@
 
 mod api;
 mod cli;
+mod conformance;
 mod core;
 mod forward;
 mod latch;
