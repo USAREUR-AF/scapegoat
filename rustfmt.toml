@@ -1,0 +1,4 @@
+# SPDX-FileCopyrightText: 2026 U.S. Federal Government (in countries where recognized)
+# SPDX-License-Identifier: Apache-2.0
+max_width = 140
+use_small_heuristics = "Max"
