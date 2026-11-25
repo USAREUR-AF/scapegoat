@@ -52,7 +52,7 @@ plugin is linked in at build time.
 |---|---|
 | `scapegoat` library | the session engine, the `Protocol` trait, config, API, CLI, outputs, network tools, conformance kit, and a protocol registry |
 | `Protocol` trait | the same hooks as the Python `Protocol` class (`docs/plugins.md`): required `keepalive` and `decode`; optional `on_receive`, `actions`, `build_action`, `split`, `summarize`, `soften_problems`, `periodic`, `owes`, `status`, `drain_events`, `tracks`, and the descriptive values (`peer_request_field`, `sim_marker`, `device_noun` and the rest) |
-| Registration | a plugin crate gives the registry a name, a constructor from `protocol_settings`, an optional `validate_session`, its simulators and its profiles |
+| Registration | a plugin crate gives the registry a name, a constructor from `protocol_settings`, an optional `validate_session`, its simulators, its profiles, and its `config_aliases` (old key name to new, for session keys and `[features]` keys; setting both names is a config error). Aliases sit on the registry entry, not the trait, because they are applied while the config is read, before any protocol is constructed |
 | `scapegoat` binary | `main` registers `toy` and runs the library's command line |
 | A node's binary | a plugin crate's own `main` registers `toy` and its protocol, then runs the same command line. It has the same verbs, API and page. Only the registry differs |
 | Conformance kit | a library function that runs every check against any registered protocol, called from the plugin crate's tests |
