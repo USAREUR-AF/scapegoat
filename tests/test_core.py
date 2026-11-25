@@ -37,7 +37,7 @@ class TestConfig(unittest.TestCase):
             f.write(text)
         cfg = cfgmod.load(f.name)
         self.assertEqual(cfg.sessions["sensor"].peer_addr, ("127.0.0.1", 47001))
-        self.assertFalse(cfg.sessions["sensor"].allow_radiate_control)
+        self.assertFalse(cfg.sessions["sensor"].allow_transmit_control)
         self.assertEqual(cfg["sessions"]["sensor"]["protocol"], "toy")
         self.assertEqual(cfg.get("bind"), "127.0.0.1:8730")
 
@@ -112,35 +112,35 @@ class TestSession(unittest.TestCase):
 
     def test_actions_and_safety(self):
         self.assertTrue(wait_for(lambda: self.s.sock is not None, 2))
-        r = self.s.run_action("request_keepalive", source="cli")
+        r = self.s.run_action("ask_reply", source="cli")
         self.assertTrue(r["ok"])
         with self.assertRaises(ActionRefused):
-            self.s.run_action("radiate_on", confirm=True, source="cli")
+            self.s.run_action("transmit_on", confirm=True, source="cli")
         with self.assertRaises(ActionUnknown):
             self.s.run_action("nope")
         ev = [e for e in self.s.events if e["kind"] in ("action", "refused")]
-        self.assertTrue(any(e["source"] == "cli" and "request_keepalive" in e["message"]
+        self.assertTrue(any(e["source"] == "cli" and "ask_reply" in e["message"]
                             for e in ev))
-        self.assertTrue(any("radiate_on refused" in e["message"] for e in ev))
+        self.assertTrue(any("transmit_on refused" in e["message"] for e in ev))
 
     def test_feature_off_hides_and_refuses_even_with_allow_and_confirm(self):
-        self.s.cfg.allow_radiate_control = True
+        self.s.cfg.allow_transmit_control = True
         self.assertTrue(wait_for(lambda: self.s.sock is not None, 2))
-        self.assertNotIn("radiate_on", self.s.actions())
-        self.assertNotIn("radiate_on", [a["name"] for a in self.s.status()["actions"]])
-        for name in ("radiate_on", "radiate_off"):
-            with self.assertRaisesRegex(ActionRefused, r"features\.radiate_control = false"):
+        self.assertNotIn("transmit_on", self.s.actions())
+        self.assertNotIn("transmit_on", [a["name"] for a in self.s.status()["actions"]])
+        for name in ("transmit_on", "transmit_off"):
+            with self.assertRaisesRegex(ActionRefused, r"features\.transmit_control = false"):
                 self.s.run_action(name, confirm=True)
 
-    def test_radiate_needs_allow_and_confirm(self):
-        self.s.cfg.radiate_feature = True
-        self.assertIn("radiate_on", self.s.actions())
-        self.s.cfg.allow_radiate_control = True
+    def test_transmit_needs_allow_and_confirm(self):
+        self.s.cfg.transmit_feature = True
+        self.assertIn("transmit_on", self.s.actions())
+        self.s.cfg.allow_transmit_control = True
         self.assertTrue(wait_for(lambda: self.s.sock is not None, 2))
         with self.assertRaisesRegex(ActionRefused, "locked"):
-            self.s.run_action("radiate_on", confirm="1")
-        tok = self.s.arm("radiate_on", source="cli", who="tester")["token"]
-        self.assertTrue(self.s.run_action("radiate_on", confirm="1", token=tok)["ok"])
+            self.s.run_action("transmit_on", confirm="1")
+        tok = self.s.arm("transmit_on", source="cli", who="tester")["token"]
+        self.assertTrue(self.s.run_action("transmit_on", confirm="1", token=tok)["ok"])
 
     def test_disable_enable_reset(self):
         s = self.s
@@ -148,7 +148,7 @@ class TestSession(unittest.TestCase):
         s.disable(source="ui")
         self.assertEqual(s.state, "disabled")
         with self.assertRaises(ActionFailed):
-            s.run_action("keepalive_now")
+            s.run_action("ping")
         s.enable(source="ui")
         self.assertTrue(wait_for(lambda: s.state == "established", 5), s.state)
         s.reset(source="ui")
@@ -283,22 +283,22 @@ class TestSurfacing(unittest.TestCase):
     def test_peer_request_and_status(self):
         from types import SimpleNamespace
         s = self.make()
-        s.protocol.actions = lambda: {"radiate_on": __import__(
-            "scapegoat.core.protocol", fromlist=["ActionSpec"]).ActionSpec("radiate_on", "On", True)}
-        msg = SimpleNamespace(fields={"request": "Peer asks to radiate",
-                                      "sensor_status": "Not radiating"},
-                              values={"request": 7})
+        s.protocol.actions = lambda: {"transmit_on": __import__(
+            "scapegoat.core.protocol", fromlist=["ActionSpec"]).ActionSpec("transmit_on", "On", True)}
+        msg = SimpleNamespace(fields={"request": "Peer asks to transmit",
+                                      "sensor_status": "Not transmitting"},
+                              values={"request": 4})
         s._on_peer_keepalive_fields(msg, 10.0)
         st = s.status()
         self.assertIsNone(st["peer_request"]["suggested_action"], "feature off: no button")
         self.assertEqual(st["peer_request"]["disabled_reason"],
-                         "radiate control is disabled on this node")
-        s.cfg.radiate_feature = True
+                         "transmit control is disabled on this node")
+        s.cfg.transmit_feature = True
         st = s.status()
-        self.assertEqual(st["peer_request"]["suggested_action"], "radiate_on")
+        self.assertEqual(st["peer_request"]["suggested_action"], "transmit_on")
         self.assertEqual(st["peer_request"]["disabled_reason"], "")
-        self.assertEqual(st["peer_status"]["sensor_status"], "Not radiating")
-        msg.fields["request"] = "No Statement"
+        self.assertEqual(st["peer_status"]["sensor_status"], "Not transmitting")
+        msg.fields["request"] = "None"
         msg.values["request"] = 0
         s._on_peer_keepalive_fields(msg, 11.0)
         self.assertIsNone(s.status()["peer_request"])
@@ -307,33 +307,33 @@ class TestSurfacing(unittest.TestCase):
     def test_status_cli_line_feature_off(self):
         from scapegoat import cli
         st = {"id": "sensor", "actions": [], "problems": [],
-              "peer_request": {"label": "Peer asks to radiate", "code": 7, "count": 1,
+              "peer_request": {"label": "Peer asks to transmit", "code": 4, "count": 1,
                                "suggested_action": None,
-                               "disabled_reason": "radiate control is disabled on this node"}}
+                               "disabled_reason": "transmit control is disabled on this node"}}
         self.assertEqual(cli._attention_lines(st), [
-            "DEVICE IS ASKING: Peer asks to radiate  (radiate control is disabled on this node)"])
+            "DEVICE IS ASKING: Peer asks to transmit  (transmit control is disabled on this node)"])
 
     def test_features_config(self):
         self.assertFalse(cfgmod.from_dict({"sessions": {"a": {"protocol": "x", "peer": "203.0.113.4:1"}}}
-                                          ).sessions["a"].radiate_feature)
-        on = cfgmod.from_dict({"features": {"radiate_control": True},
+                                          ).sessions["a"].transmit_feature)
+        on = cfgmod.from_dict({"features": {"transmit_control": True},
                                "sessions": {"a": {"protocol": "x", "peer": "203.0.113.4:1"}}})
-        self.assertTrue(on.sessions["a"].radiate_feature)
+        self.assertTrue(on.sessions["a"].transmit_feature)
         with self.assertRaises(cfgmod.ConfigError):
-            cfgmod.from_dict({"features": {"radiate_control": "yes"}})
+            cfgmod.from_dict({"features": {"transmit_control": "yes"}})
         for p in cfgmod.list_profiles("/nonexistent"):
             if cfgmod.tomllib is not None:
-                self.assertIs(cfgmod._read(p["path"])["features"]["radiate_control"], True, p)
+                self.assertIs(cfgmod._read(p["path"])["features"]["transmit_control"], True, p)
 
     def test_status_cli_lines(self):
         from scapegoat import cli
-        st = {"id": "sensor", "actions": [{"name": "radiate_on", "dangerous": True, "allowed": False}],
-              "peer_request": {"label": "Peer asks to radiate", "code": 7, "count": 3,
-                               "suggested_action": "radiate_on"},
+        st = {"id": "sensor", "actions": [{"name": "transmit_on", "dangerous": True, "allowed": False}],
+              "peer_request": {"label": "Peer asks to transmit", "code": 4, "count": 3,
+                               "suggested_action": "transmit_on"},
               "problems": [{"problem": "x", "count": 2}]}
         lines = cli._attention_lines(st)
-        self.assertEqual(lines[0], "DEVICE IS ASKING: Peer asks to radiate  -> scapegoat "
-                                   "action sensor radiate_on --confirm  (needs allow_radiate_control = true)")
+        self.assertEqual(lines[0], "DEVICE IS ASKING: Peer asks to transmit  -> scapegoat "
+                                   "action sensor transmit_on --confirm  (needs allow_transmit_control = true)")
         self.assertEqual(lines[1], "PROBLEM: x (x2)")
 
 
@@ -406,3 +406,32 @@ class TestLocalSeenAs(unittest.TestCase):
         self.assertEqual(cfgmod.from_dict({"node_role": " C2 node "}).node_role, "C2 node")
 
 
+
+
+class TestConfigAliases(unittest.TestCase):
+    """A plugin's CONFIG_ALIASES keeps its old key names working."""
+
+    def setUp(self):
+        from scapegoat.core import plugins
+        self.plugins = plugins
+        self.saved = plugins.config_aliases
+        table = {"session": {"old_allow": "allow_transmit_control"},
+                 "features": {"old_feature": "transmit_control"}}
+        plugins.config_aliases = lambda section, protocol=None: dict(table.get(section, {}))
+
+    def tearDown(self):
+        self.plugins.config_aliases = self.saved
+
+    def test_old_names_are_read(self):
+        from scapegoat.core import config as cfgmod
+        cfg = cfgmod.from_dict({"features": {"old_feature": True},
+                                "sessions": {"a": {"protocol": "toy", "peer": "127.0.0.1:47001",
+                                                   "old_allow": True}}})
+        self.assertTrue(cfg.sessions["a"].transmit_feature)
+        self.assertTrue(cfg.sessions["a"].allow_transmit_control)
+
+    def test_both_names_is_an_error(self):
+        from scapegoat.core import config as cfgmod
+        with self.assertRaisesRegex(cfgmod.ConfigError, "not both"):
+            cfgmod.from_dict({"sessions": {"a": {"protocol": "toy", "peer": "127.0.0.1:47001",
+                                                 "old_allow": True, "allow_transmit_control": True}}})

@@ -12,7 +12,7 @@ def free_udp_port():
     return p
 
 
-def make_config(sensor_port, local_port, forward=(), allow_radiate=False, interval=0.2,
+def make_config(sensor_port, local_port, forward=(), allow_transmit=False, interval=0.2,
                 allow_net=False, candidates=None, extra=None):
     data = {
         "bind": "127.0.0.1:0",
@@ -21,7 +21,7 @@ def make_config(sensor_port, local_port, forward=(), allow_radiate=False, interv
         "sessions": {"sensor": {
             "protocol": "fake", "enabled": True,
             "local": f"127.0.0.1:{local_port}", "peer": f"127.0.0.1:{sensor_port}",
-            "forward": list(forward), "allow_radiate_control": allow_radiate,
+            "forward": list(forward), "allow_transmit_control": allow_transmit,
             "protocol_settings": {"keepalive_interval_s": interval, "establish_after": 3,
                                   "device_id": 1},
         }},

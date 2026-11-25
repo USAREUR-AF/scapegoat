@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- The `toy` protocol's keepalive fields are `seq`, `ack`, `ask` and `flags`; its actions are
+  `ping` and `ask_reply` (`ask = 1`). Its default keepalive interval is 10 s.
+- The gate for actions that make a device transmit is named for that: `allow_transmit_control`,
+  `[features] transmit_control`, and the plugin attribute `transmit_actions`.
+- A plugin can keep old config key names working with `CONFIG_ALIASES` (`docs/plugins.md`).
+
 ## 0.1.0
 
 The first public release of the scapegoat core: the session engine (keepalive schedule,

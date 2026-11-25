@@ -40,24 +40,24 @@ class ProtocolConformance:
         ka = self.proto.keepalive(link)
         self.assertIsInstance(ka, (bytes, bytearray))
         self.assertGreater(len(ka), 0)
-        self.assertEqual(link.tx_counter, 1, "keepalive() must advance the transmit counter once")
+        self.assertEqual(link.tx_counter, 1, "keepalive() must advance the sequence number once")
         msg = self.proto.decode(bytes(ka))
         self.assertTrue(msg.is_keepalive, msg.problems)
         self.assertTrue(msg.ok, msg.problems)
         self.assertEqual(msg.peer_tx_counter, link.tx_counter)
 
-    def test_transmit_counter_wraps_to_one(self):
+    def test_sequence_wraps_to_one(self):
         link = LinkState(tx_counter=65535)
         msg = self.proto.decode(bytes(self.proto.keepalive(link)))
         self.assertEqual(link.tx_counter, 1)
         self.assertEqual(msg.peer_tx_counter, 1)
 
-    def test_receive_counter_echoed(self):
+    def test_peer_sequence_echoed(self):
         link = LinkState(rx_counter=4321)
         msg = self.proto.decode(bytes(self.proto.keepalive(link)))
         self.assertIn(4321, [v for v in (msg.fields or {}).values() if isinstance(v, int)]
                       + [v for v in (getattr(msg, "values", None) or {}).values() if isinstance(v, int)],
-                      "a keepalive should carry the last peer counter we saw")
+                      "a keepalive should carry the last peer sequence number we saw")
 
     # ---- actions -------------------------------------------------------------
     def test_actions_are_well_formed(self):
@@ -93,7 +93,7 @@ class ProtocolConformance:
         p = self.proto
         self.assertIsInstance(getattr(p, "peer_request_actions", {}) or {}, dict)
         self.assertIsInstance(tuple(getattr(p, "peer_status_fields", ()) or ()), tuple)
-        self.assertTrue(all(isinstance(a, str) for a in (getattr(p, "radiate_actions", ()) or ())))
+        self.assertTrue(all(isinstance(a, str) for a in (getattr(p, "transmit_actions", ()) or ())))
         marker = getattr(p, "sim_marker", None)
         self.assertTrue(marker is None or (isinstance(marker, tuple) and len(marker) == 2))
         msg = p.decode(bytes(p.keepalive(LinkState())))

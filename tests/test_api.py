@@ -80,20 +80,20 @@ class TestApi(ApiTest):
 
     def test_actions(self):
         self.assertTrue(wait_for(lambda: self.svc.sessions["sensor"].sock is not None, 2))
-        code, r = self.req("POST", "/api/sessions/sensor/actions/keepalive_now", {})
+        code, r = self.req("POST", "/api/sessions/sensor/actions/ping", {})
         self.assertEqual(code, 200, r)
-        code, r = self.req("POST", "/api/sessions/sensor/actions/radiate_on", {"confirm": True})
+        code, r = self.req("POST", "/api/sessions/sensor/actions/transmit_on", {"confirm": True})
         self.assertEqual(code, 403)
-        self.assertIn("features.radiate_control = false", r["error"])
+        self.assertIn("features.transmit_control = false", r["error"])
         self.assertEqual(self.req("POST", "/api/sessions/sensor/actions/bogus", {})[0], 404)
         ev = self.svc.sessions["sensor"].get_events(20)
-        self.assertTrue(any(e["source"] == "ui" and "keepalive_now" in e["message"]
+        self.assertTrue(any(e["source"] == "ui" and "ping" in e["message"]
                             for e in ev))
 
     def test_lifecycle(self):
         code, r = self.req("POST", "/api/sessions/sensor/disable", {})
         self.assertEqual((code, r["state"]), (200, "disabled"))
-        self.assertEqual(self.req("POST", "/api/sessions/sensor/actions/keepalive_now", {})[0], 400)
+        self.assertEqual(self.req("POST", "/api/sessions/sensor/actions/ping", {})[0], 400)
         code, r = self.req("POST", "/api/sessions/sensor/enable", {})
         self.assertEqual(code, 200)
         self.assertNotEqual(r["state"], "disabled")
@@ -134,18 +134,18 @@ class TestApi(ApiTest):
         self.assertIn("SESSION", out)
         code, out, _ = self.cli("status", "sensor", "--json")
         self.assertEqual(json.loads(out)["id"], "sensor")
-        code, out, err = self.cli("action", "sensor", "radiate_on", "--arm", "--confirm", "1")
+        code, out, err = self.cli("action", "sensor", "transmit_on", "--arm", "--confirm", "1")
         self.assertEqual(code, 1)
         self.assertIn("disabled by feature flag", err)
-        code, out, _ = self.cli("action", "sensor", "request_keepalive")
+        code, out, _ = self.cli("action", "sensor", "ask_reply")
         self.assertEqual(code, 0, out)
         code, out, _ = self.cli("events", "sensor", "-n", "5")
         self.assertEqual(code, 0)
         self.assertIn("cli", out)
         code, out, _ = self.cli("actions", "sensor")
-        self.assertNotIn("radiate", out)
+        self.assertNotIn("transmit", out)
         code, st = self.req("GET", "/api/sessions/sensor")
-        self.assertNotIn("radiate_on", [a["name"] for a in st["actions"]])
+        self.assertNotIn("transmit_on", [a["name"] for a in st["actions"]])
         code, out, err = self.cli("status", "nope")
         self.assertEqual(code, 1)
 

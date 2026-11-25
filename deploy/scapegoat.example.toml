@@ -11,7 +11,7 @@ expected_local_address = ""      # e.g. "192.0.2.10/24": checked and shown, neve
 # plugin_path = ["/opt/scapegoat/plugins"]   # extra protocol plugin directories
 
 [features]
-radiate_control = false          # actions a protocol marks as radiate-gated stay hidden
+transmit_control = false          # actions a protocol marks as transmit-gated stay hidden
 
 [sessions.sensor]
 protocol = "toy"                 # a built-in protocol or an installed plugin
@@ -21,7 +21,7 @@ peer = "127.0.0.1:47001"         # the sensor's address:port
 peer_candidates = []             # other addresses to try; the first that answers is locked
 forward = []                     # copy every received message to these address:port
 forward_mode = "message"         # message | datagram
-allow_radiate_control = false
+allow_transmit_control = false
 
 [sessions.sensor.protocol_settings]
 keepalive_interval_s = 3

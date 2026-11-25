@@ -17,247 +17,254 @@
    "t": 0.15,
    "dir": "tx",
    "name": "KeepAlive",
-   "text": "transmit_counter=1 receive_counter=0 action=0 flags=0",
+   "text": "seq=1 ack=0 ask=0 flags=0",
    "hex": "4b410a00010000000097"
   },
   {
-   "t": 3.22,
+   "t": 3.29,
    "dir": "tx",
    "name": "KeepAlive",
-   "text": "transmit_counter=2 receive_counter=0 action=0 flags=0",
+   "text": "seq=2 ack=0 ask=0 flags=0",
    "hex": "4b410a00020000000098"
   },
   {
-   "t": 6.3,
+   "t": 6.41,
    "kind": "peer",
    "level": "info",
    "text": "peer answering from 127.0.0.1:47001"
   },
   {
-   "t": 6.3,
+   "t": 6.41,
    "kind": "lock",
    "level": "info",
    "text": "locked onto 127.0.0.1:47001"
   },
   {
-   "t": 6.3,
+   "t": 6.41,
    "kind": "state",
    "level": "info",
    "text": "handshaking -> establishing: first keepalive from peer"
   },
   {
-   "t": 6.3,
+   "t": 6.41,
    "kind": "kind",
    "level": "info",
    "text": "peer is SIMULATOR at 127.0.0.1:47001"
   },
   {
-   "t": 6.3,
+   "t": 6.41,
    "dir": "tx",
    "name": "KeepAlive",
-   "text": "transmit_counter=3 receive_counter=0 action=0 flags=0",
+   "text": "seq=3 ack=0 ask=0 flags=0",
    "hex": "4b410a00030000000099"
   },
   {
-   "t": 6.3,
+   "t": 6.41,
    "dir": "rx",
    "name": "KeepAlive",
-   "text": "transmit_counter=1 receive_counter=3 action=0 flags=1",
+   "text": "seq=1 ack=3 ask=0 flags=1",
    "hex": "4b410a0001000300019b"
   },
   {
-   "t": 6.3,
+   "t": 6.41,
    "dir": "rx",
    "name": "Data",
    "text": "payload='tick 1'",
    "hex": "44540a7469636b20319e"
   },
   {
-   "t": 9.33,
-   "dir": "rx",
-   "name": "KeepAlive",
-   "text": "transmit_counter=2 receive_counter=3 action=0 flags=1",
-   "hex": "4b410a0002000300019c"
-  },
-  {
-   "t": 9.39,
+   "t": 9.48,
    "dir": "tx",
    "name": "KeepAlive",
-   "text": "transmit_counter=4 receive_counter=2 action=0 flags=0",
-   "hex": "4b410a0004000200009c"
+   "text": "seq=4 ack=1 ask=0 flags=0",
+   "hex": "4b410a0004000100009b"
   },
   {
-   "t": 11.34,
+   "t": 9.49,
+   "dir": "rx",
+   "name": "KeepAlive",
+   "text": "seq=2 ack=4 ask=0 flags=1",
+   "hex": "4b410a0002000400019d"
+  },
+  {
+   "t": 11.52,
    "dir": "rx",
    "name": "Data",
    "text": "payload='tick 2'",
    "hex": "44540a7469636b20329f"
   },
   {
-   "t": 12.34,
+   "t": 12.55,
    "kind": "state",
    "level": "info",
    "text": "establishing -> established: 3 keepalives received"
   },
   {
-   "t": 12.34,
+   "t": 12.55,
    "dir": "rx",
    "name": "KeepAlive",
-   "text": "transmit_counter=3 receive_counter=4 action=0 flags=1",
+   "text": "seq=3 ack=4 ask=0 flags=1",
    "hex": "4b410a0003000400019e"
   },
   {
-   "t": 12.49,
+   "t": 12.58,
    "dir": "tx",
    "name": "KeepAlive",
-   "text": "transmit_counter=5 receive_counter=3 action=0 flags=0",
+   "text": "seq=5 ack=3 ask=0 flags=0",
    "hex": "4b410a0005000300009e"
   },
   {
-   "t": 15.42,
+   "t": 15.55,
    "dir": "rx",
    "name": "KeepAlive",
-   "text": "transmit_counter=4 receive_counter=5 action=0 flags=1",
+   "text": "seq=4 ack=5 ask=0 flags=1",
    "hex": "4b410a000400050001a0"
   },
   {
-   "t": 15.57,
+   "t": 15.59,
    "dir": "tx",
    "name": "KeepAlive",
-   "text": "transmit_counter=6 receive_counter=4 action=0 flags=0",
+   "text": "seq=6 ack=4 ask=0 flags=0",
    "hex": "4b410a000600040000a0"
   },
   {
-   "t": 16.37,
+   "t": 16.53,
    "dir": "rx",
    "name": "Data",
    "text": "payload='tick 4'",
    "hex": "44540a7469636b2034a1"
   },
   {
-   "t": 18.49,
+   "t": 18.57,
    "dir": "rx",
    "name": "KeepAlive",
-   "text": "transmit_counter=5 receive_counter=6 action=0 flags=1",
+   "text": "seq=5 ack=6 ask=0 flags=1",
    "hex": "4b410a000500060001a2"
   },
   {
-   "t": 18.66,
+   "t": 18.71,
    "dir": "tx",
    "name": "KeepAlive",
-   "text": "transmit_counter=7 receive_counter=5 action=0 flags=0",
+   "text": "seq=7 ack=5 ask=0 flags=0",
    "hex": "4b410a000700050000a2"
   },
   {
-   "t": 21.75,
+   "t": 21.81,
    "dir": "tx",
    "name": "KeepAlive",
-   "text": "transmit_counter=8 receive_counter=5 action=0 flags=0",
+   "text": "seq=8 ack=5 ask=0 flags=0",
    "hex": "4b410a000800050000a3"
   },
   {
-   "t": 22.37,
+   "t": 22.43,
    "kind": "state",
    "level": "warn",
    "text": "established -> degraded: one keepalive from peer missed (3.9 s)"
   },
   {
-   "t": 24.83,
+   "t": 24.92,
    "dir": "tx",
    "name": "KeepAlive",
-   "text": "transmit_counter=9 receive_counter=5 action=0 flags=0",
+   "text": "seq=9 ack=5 ask=0 flags=0",
    "hex": "4b410a000900050000a4"
   },
   {
-   "t": 25.28,
+   "t": 25.38,
    "kind": "state",
    "level": "warn",
    "text": "degraded -> lost: no keepalive from peer for 6.8 s (two missed); still sending keepalives"
   },
   {
-   "t": 27.89,
+   "t": 28.03,
+   "dir": "tx",
+   "name": "KeepAlive",
+   "text": "seq=10 ack=5 ask=0 flags=0",
+   "hex": "4b410a000a00050000a5"
+  },
+  {
+   "t": 31.16,
+   "dir": "tx",
+   "name": "KeepAlive",
+   "text": "seq=11 ack=5 ask=0 flags=0",
+   "hex": "4b410a000b00050000a6"
+  },
+  {
+   "t": 31.17,
    "kind": "state",
    "level": "info",
    "text": "lost -> establishing: peer keepalive after link lost"
   },
   {
-   "t": 27.89,
-   "dir": "tx",
-   "name": "KeepAlive",
-   "text": "transmit_counter=10 receive_counter=5 action=0 flags=0",
-   "hex": "4b410a000a00050000a5"
-  },
-  {
-   "t": 27.89,
+   "t": 31.17,
    "dir": "rx",
    "name": "KeepAlive",
-   "text": "transmit_counter=1 receive_counter=10 action=0 flags=1",
-   "hex": "4b410a0001000a0001a2"
+   "text": "seq=1 ack=11 ask=0 flags=1",
+   "hex": "4b410a0001000b0001a3"
   },
   {
-   "t": 27.89,
+   "t": 31.17,
    "dir": "rx",
    "name": "Data",
    "text": "payload='tick 1'",
    "hex": "44540a7469636b20319e"
   },
   {
-   "t": 31.21,
-   "dir": "tx",
-   "name": "KeepAlive",
-   "text": "transmit_counter=11 receive_counter=1 action=0 flags=0",
-   "hex": "4b410a000b00010000a2"
-  },
-  {
-   "t": 31.22,
+   "t": 34.25,
    "dir": "rx",
    "name": "KeepAlive",
-   "text": "transmit_counter=2 receive_counter=10 action=0 flags=1",
-   "hex": "4b410a0002000a0001a3"
+   "text": "seq=2 ack=11 ask=0 flags=1",
+   "hex": "4b410a0002000b0001a4"
   },
   {
-   "t": 32.96,
+   "t": 34.27,
+   "dir": "tx",
+   "name": "KeepAlive",
+   "text": "seq=12 ack=2 ask=0 flags=0",
+   "hex": "4b410a000c00020000a4"
+  },
+  {
+   "t": 36.23,
    "dir": "rx",
    "name": "Data",
    "text": "payload='tick 2'",
    "hex": "44540a7469636b20329f"
   },
   {
-   "t": 34.02,
+   "t": 37.27,
    "kind": "state",
    "level": "info",
    "text": "establishing -> established: 3 keepalives received"
   },
   {
-   "t": 34.02,
+   "t": 37.27,
    "dir": "rx",
    "name": "KeepAlive",
-   "text": "transmit_counter=3 receive_counter=11 action=0 flags=1",
-   "hex": "4b410a0003000b0001a5"
-  },
-  {
-   "t": 34.23,
-   "dir": "tx",
-   "name": "KeepAlive",
-   "text": "transmit_counter=12 receive_counter=3 action=0 flags=0",
-   "hex": "4b410a000c00030000a5"
-  },
-  {
-   "t": 37.06,
-   "dir": "rx",
-   "name": "KeepAlive",
-   "text": "transmit_counter=4 receive_counter=12 action=0 flags=1",
-   "hex": "4b410a0004000c0001a7"
+   "text": "seq=3 ack=12 ask=0 flags=1",
+   "hex": "4b410a0003000c0001a6"
   },
   {
    "t": 37.31,
    "dir": "tx",
    "name": "KeepAlive",
-   "text": "transmit_counter=13 receive_counter=4 action=0 flags=0",
-   "hex": "4b410a000d00040000a7"
+   "text": "seq=13 ack=3 ask=0 flags=0",
+   "hex": "4b410a000d00030000a6"
   },
   {
-   "t": 38.02,
+   "t": 40.31,
+   "dir": "rx",
+   "name": "KeepAlive",
+   "text": "seq=4 ack=13 ask=0 flags=1",
+   "hex": "4b410a0004000d0001a8"
+  },
+  {
+   "t": 40.42,
+   "dir": "tx",
+   "name": "KeepAlive",
+   "text": "seq=14 ack=4 ask=0 flags=0",
+   "hex": "4b410a000e00040000a8"
+  },
+  {
+   "t": 41.24,
    "dir": "rx",
    "name": "Data",
    "text": "payload='tick 4'",

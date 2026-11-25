@@ -33,7 +33,7 @@
       el.textContent = "   " + l.text;
     } else {
       el.className = l.dir;
-      el.textContent = (l.dir === "tx" ? "-> " : "<- ") + pad(l.name, 10) + " " + l.text.replace(/ action=\d+ flags=\d+$/, "");
+      el.textContent = (l.dir === "tx" ? "-> " : "<- ") + pad(l.name, 10) + " " + l.text.replace(/ ask=\d+ flags=\d+$/, "");
     }
     return el;
   }

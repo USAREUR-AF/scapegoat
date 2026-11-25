@@ -31,7 +31,7 @@ class ActionSpec:
     label: str
     dangerous: bool = False
     description: str = ""
-    # Plain words naming what firing it does to the sensor; may use {device_id} and {param}.
+    # Plain words naming what sending it does to the sensor; may use {device_id} and {param}.
     effect: str = ""
     # Arguments the action takes: [(name, help, default or None = required)].
     params: list = field(default_factory=list)
@@ -96,8 +96,8 @@ class Protocol:
     peer_request_actions: dict = {}
     # Keepalive fields that carry the peer's own status, shown in the session status.
     peer_status_fields: tuple = ()
-    # Actions gated by the [features] radiate_control flag (as well as by `dangerous`).
-    radiate_actions: frozenset = frozenset()
+    # Actions gated by the [features] transmit_control flag (as well as by `dangerous`).
+    transmit_actions: frozenset = frozenset()
     # (field, value) a simulator puts in its keepalives, so the page can say SIMULATOR.
     sim_marker: tuple | None = None
     # What the CLI and the web page call the sensor this protocol talks to; the

@@ -6,9 +6,9 @@
 bind = "127.0.0.1:8730"
 allow_net_control = false
 
-# radiate_control: dangerous actions (none in toy) stay behind the safety latch.
+# transmit_control: dangerous actions (none in toy) stay behind the safety latch.
 [features]
-radiate_control = true
+transmit_control = true
 
 [sessions.sensor]
 protocol = "toy"

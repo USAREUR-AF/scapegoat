@@ -49,10 +49,10 @@ BIND_RETRY_S = 5.0
 FOREIGN_LOG_EVERY_S = 60.0
 REPEAT_LOG_EVERY_S = 60.0   # a repeated problem or peer request is logged at most this often
 MAX_PROBLEMS = 50           # distinct problem strings kept in status
-# Protocol-specific behaviour (peer requests, peer status fields, radiate-gated actions,
+# Protocol-specific behaviour (peer requests, peer status fields, transmit-gated actions,
 # the simulator marker, tolerated decode problems) comes from the Protocol's hooks; see
 # core/protocol.py. The core holds no protocol constants.
-FEATURE_OFF_MSG = "radiate control is disabled by feature flag (features.radiate_control = false)"
+FEATURE_OFF_MSG = "transmit control is disabled by feature flag (features.transmit_control = false)"
 KIND_SIM = "SIMULATOR"     # the other two kinds name the protocol's device: Session.kind_none / kind_real
 
 
@@ -771,7 +771,7 @@ class Session:
         raw, label = self._field(msg, req_field)
         if raw is None and not label:
             return
-        if raw == 0 or (raw is None and label.lower() in ("0", "no statement")):
+        if raw == 0 or (raw is None and label.lower() in ("0", "none")):
             self.peer_request = None
             return
         label = label or f"request {raw}"
@@ -836,15 +836,15 @@ class Session:
         except Exception:
             return {}
 
-    def _is_radiate(self, name, spec) -> bool:
-        gated = getattr(self.protocol, "radiate_actions", None) or ()
+    def _is_transmit(self, name, spec) -> bool:
+        gated = getattr(self.protocol, "transmit_actions", None) or ()
         return name in gated or bool(getattr(spec, "dangerous", False))
 
     def actions(self) -> dict:
-        """The actions offered. Radiate actions vanish unless features.radiate_control."""
+        """The actions offered. Transmit actions vanish unless features.transmit_control."""
         acts = self._all_actions()
-        if not self.cfg.radiate_feature:
-            acts = {n: s for n, s in acts.items() if not self._is_radiate(n, s)}
+        if not self.cfg.transmit_feature:
+            acts = {n: s for n, s in acts.items() if not self._is_transmit(n, s)}
         return acts
 
     # ------------------------------------------------------------------ safety latch
@@ -871,20 +871,20 @@ class Session:
                                         "who": who, "detail": extra}, "hex": ""})
 
     def _dangerous_spec(self, name: str, source: str):
-        if not self.cfg.radiate_feature and (
-                self._is_radiate(name, self._all_actions().get(name))):
+        if not self.cfg.transmit_feature and (
+                self._is_transmit(name, self._all_actions().get(name))):
             self.event("refused", f"{name} refused: {FEATURE_OFF_MSG}", level="warn", source=source)
             raise ActionRefused(FEATURE_OFF_MSG)
         acts = self.actions()
         spec = acts.get(name)
         if spec is None:
             raise ActionUnknown(f"no action named {name!r}. Known: {', '.join(acts) or 'none'}")
-        if spec.dangerous and not self.cfg.allow_radiate_control:
-            self.event("refused", f"{name} refused: allow_radiate_control is false "
+        if spec.dangerous and not self.cfg.allow_transmit_control:
+            self.event("refused", f"{name} refused: allow_transmit_control is false "
                                   "in this session's config", level="warn", source=source)
             raise ActionRefused(
                 f"{name} commands the {self.noun} and this session does not allow it. "
-                f"Set allow_radiate_control = true under [sessions.{self.id}] and restart.")
+                f"Set allow_transmit_control = true under [sessions.{self.id}] and restart.")
         return spec
 
     def arm(self, name: str, source: str = "api", who: str = "", args: dict | None = None) -> dict:
@@ -975,7 +975,7 @@ class Session:
         with self.lock:
             acts = []
             for n, spec in self.actions().items():
-                allowed = (not spec.dangerous) or self.cfg.allow_radiate_control
+                allowed = (not spec.dangerous) or self.cfg.allow_transmit_control
                 arm = self.arms.get(n)
                 acts.append({"name": n, "label": spec.label, "dangerous": bool(spec.dangerous),
                              "description": spec.description, "allowed": allowed,
@@ -985,7 +985,7 @@ class Session:
                              "armed_s": round(arm["until"] - now, 1) if arm and arm["until"] > now
                              else 0,
                              "why_not": "" if allowed else
-                             "allow_radiate_control is false in this session's config"})
+                             "allow_transmit_control is false in this session's config"})
             pstat = None
             fn = getattr(self.protocol, "status", None)
             if callable(fn):
@@ -1005,8 +1005,8 @@ class Session:
                                for c in self.candidates],
                 "peer_seen": f"{self.peer_seen[0]}:{self.peer_seen[1]}" if self.peer_seen else None,
                 "forward": list(self.cfg.forward),
-                "allow_radiate_control": self.cfg.allow_radiate_control,
-                "radiate_control_feature": self.cfg.radiate_feature,
+                "allow_transmit_control": self.cfg.allow_transmit_control,
+                "transmit_control_feature": self.cfg.transmit_feature,
                 "peer_kind": self.peer_kind(),
                 "peer_is_real": self.peer_kind() == self.kind_real,
                 "device_noun": self.noun,
@@ -1064,9 +1064,9 @@ class Session:
         r = self.peer_requests[self.peer_request]
         mapping = getattr(self.protocol, "peer_request_actions", None) or {}
         wanted = mapping.get(r["code"])
-        disabled = ("radiate control is disabled on this node"
-                    if wanted and not self.cfg.radiate_feature
-                    and self._is_radiate(wanted, self._all_actions().get(wanted)) else "")
+        disabled = ("transmit control is disabled on this node"
+                    if wanted and not self.cfg.transmit_feature
+                    and self._is_transmit(wanted, self._all_actions().get(wanted)) else "")
         return {"label": self.peer_request, "code": r["code"], "count": r["count"],
                 "last_seen_age_s": age(r["last"]),
                 "suggested_action": self._suggested_action(r["code"]),

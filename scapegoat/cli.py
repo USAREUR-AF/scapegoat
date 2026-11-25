@@ -235,7 +235,7 @@ def _attention_lines(s):
             a = next((x for x in s.get("actions", []) if x["name"] == act), {})
             line += f"  -> scapegoat action {s['id']} {act}" + (" --confirm" if a.get("dangerous") else "")
             if a and not a.get("allowed"):
-                line += "  (needs allow_radiate_control = true)"
+                line += "  (needs allow_transmit_control = true)"
         out.append(line)
     probs = s.get("problems") or []
     if probs:
@@ -374,7 +374,7 @@ def cmd_actions(args):
     def human(s):
         rows = [[a["name"] + "".join(f" <{p['name']}>" for p in a.get("params", [])),
                  "LOCKED (--arm)" if a["dangerous"] else "",
-                 "yes" if a["allowed"] else "no (allow_radiate_control is false)",
+                 "yes" if a["allowed"] else "no (allow_transmit_control is false)",
                  a["description"]] for a in s["actions"]]
         print(_table(rows, ["ACTION", "", "ALLOWED", "WHAT IT DOES"]))
     emit(args, s, human)
@@ -807,7 +807,7 @@ def build_parser():
                     "sending data. Run `scapegoat serve` as the service; the other "
                     "commands talk to the running service.",
         epilog="Examples:\n  scapegoat status\n  scapegoat events sensor -n 20\n"
-               "  scapegoat action sensor request_keepalive\n  scapegoat net ping 192.0.2.81",
+               "  scapegoat action sensor ask_reply\n  scapegoat net ping 192.0.2.81",
         formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--api", default=DEFAULT_API, metavar="URL",
                    help=f"address of the scapegoat service (default {DEFAULT_API}; env SCAPEGOAT_API)")
@@ -851,7 +851,7 @@ def build_parser():
                                     "without --arm the command only says what it would do; "
                                     "with --arm it asks you to type the device ID (or give it "
                                     "with --confirm ID). One command per arm.",
-                        epilog="Examples:\n  scapegoat action sensor request_keepalive\n"
+                        epilog="Examples:\n  scapegoat action sensor ask_reply\n"
                                "  scapegoat action sensor <dangerous-action> --arm --confirm <id>",
                         formatter_class=argparse.RawDescriptionHelpFormatter)
     sp.add_argument("session", help="session name (e.g. sensor)")
