@@ -1,0 +1,12 @@
+#!/bin/sh
+# SPDX-FileCopyrightText: 2026 U.S. Federal Government (in countries where recognized)
+# SPDX-License-Identifier: Apache-2.0
+# scapegoat, run from a checkout or an unpacked release: runs the binary built for this
+# machine (bin/x86_64/scapegoat or bin/aarch64/scapegoat). tools/build-bin.sh builds it.
+d=$(dirname "$(readlink -f "$0")")
+b="$d/$(uname -m)/scapegoat"
+if [ ! -x "$b" ]; then
+    echo "scapegoat: no binary for $(uname -m) at $b (build it with tools/build-bin.sh)" >&2
+    exit 1
+fi
+exec "$b" "$@"

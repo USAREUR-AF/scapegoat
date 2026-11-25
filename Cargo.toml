@@ -1,0 +1,37 @@
+# SPDX-FileCopyrightText: 2026 U.S. Federal Government (in countries where recognized)
+# SPDX-License-Identifier: Apache-2.0
+[package]
+name = "scapegoat"
+# The released version is the VERSION file; the binary reads it at build time.
+version = "0.0.0"
+edition = "2021"
+license = "Apache-2.0"
+publish = false
+rust-version = "1.85"
+autotests = false
+
+[lib]
+name = "scapegoat"
+path = "src/lib.rs"
+
+[[bin]]
+name = "scapegoat"
+path = "src/main.rs"
+
+[[test]]
+name = "rust"
+path = "tests/rust/main.rs"
+
+[dependencies]
+getrandom = "=0.3.4"
+libc = "0.2.191"
+serde_json = { version = "1.0.154", features = ["preserve_order"] }
+socket2 = "0.6"
+toml = { version = "0.9", default-features = false, features = ["parse", "std", "serde", "preserve_order"] }
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true

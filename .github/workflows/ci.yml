@@ -32,3 +32,36 @@ jobs:
           python-version: ${{ matrix.python }}
       - name: Standard library only; every test, no plugin present
         run: python -m unittest discover -s tests -t . -v
+
+  rust:
+    name: Rust port, format, lints, tests, static binary
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Rust formatting, lints and tests
+        run: |
+          rustup component add rustfmt clippy
+          cargo fmt --check
+          cargo clippy --locked --all-targets -- -D warnings
+          cargo test --locked
+      - name: The static binary
+        run: tools/build-bin.sh
+      - name: The binary is static and its version is VERSION
+        run: |
+          file bin/x86_64/scapegoat | grep -qE 'static-pie linked|statically linked'
+          test "$(./bin/scapegoat --version)" = "scapegoat $(cat VERSION)"
+
+  rust-arm64:
+    name: Rust port, arm64 static binary
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - run: tools/build-bin.sh
+      - run: file bin/aarch64/scapegoat | grep -qE 'static-pie linked|statically linked'
+      - run: test "$(./bin/scapegoat --version)" = "scapegoat $(cat VERSION)"
