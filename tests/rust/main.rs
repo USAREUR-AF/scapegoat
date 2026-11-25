@@ -9,5 +9,6 @@ mod core;
 mod forward;
 mod latch;
 mod node;
+mod outputs;
 mod support;
 mod traffic;

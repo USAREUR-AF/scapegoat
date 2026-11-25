@@ -41,6 +41,11 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
+      - name: goat-transformers packs at the engine's pinned commit, for the output tests
+        run: |
+          rev=$(sed -n 's/^goat-transformers = .*rev = "\([0-9a-f]*\)".*/\1/p' Cargo.toml)
+          curl -fsSL "https://codeload.github.com/USAREUR-AF/goat-transformers/tar.gz/$rev" | tar -xz -C "$RUNNER_TEMP"
+          echo "GOAT_TRANSFORMERS_PATH=$RUNNER_TEMP/goat-transformers-$rev" >> "$GITHUB_ENV"
       - name: Rust formatting, lints and tests
         run: |
           rustup component add rustfmt clippy

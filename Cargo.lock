@@ -64,6 +64,11 @@ dependencies = [
 ]
 
 [[package]]
+name = "goat-transformers"
+version = "0.8.0"
+source = "git+https://github.com/USAREUR-AF/goat-transformers?rev=792592130fc776dea5d54d153ac1b15cf364fd6c#792592130fc776dea5d54d153ac1b15cf364fd6c"
+
+[[package]]
 name = "hashbrown"
 version = "0.17.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -127,6 +132,7 @@ version = "0.0.0"
 dependencies = [
  "clap",
  "getrandom",
+ "goat-transformers",
  "libc",
  "serde_json",
  "socket2",
