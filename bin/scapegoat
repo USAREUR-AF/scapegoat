@@ -4,9 +4,10 @@
 # scapegoat, run from a checkout or an unpacked release: runs the binary built for this
 # machine (bin/x86_64/scapegoat or bin/aarch64/scapegoat). tools/build-bin.sh builds it.
 d=$(dirname "$(readlink -f "$0")")
-b="$d/$(uname -m)/scapegoat"
+m=$(uname -m); [ "$m" = arm64 ] && m=aarch64
+b="$d/$m/scapegoat"
 if [ ! -x "$b" ]; then
-    echo "scapegoat: no binary for $(uname -m) at $b (build it with tools/build-bin.sh)" >&2
+    echo "scapegoat: no binary for $m at $b (build it with tools/build-bin.sh)" >&2
     exit 1
 fi
 exec "$b" "$@"

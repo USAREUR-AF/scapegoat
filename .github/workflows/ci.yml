@@ -16,7 +16,7 @@ concurrency:
 
 jobs:
   tests:
-    name: unit tests, Python ${{ matrix.python }}
+    name: field-node installer tests, Python ${{ matrix.python }}
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     strategy:
@@ -30,11 +30,11 @@ jobs:
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: ${{ matrix.python }}
-      - name: Standard library only; every test, no plugin present
+      - name: The installer's shell, driven from Python (a stand-in scapegoat binary)
         run: python -m unittest discover -s tests -t . -v
 
   rust:
-    name: Rust port, format, lints, tests, static binary
+    name: format, lints, tests, static binary
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
@@ -52,13 +52,12 @@ jobs:
           cargo fmt --check
           cargo clippy --locked --all-targets -- -D warnings
           cargo test --locked
-      - name: The Python API and CLI tests, against a node binary over the wire
-        run: |
-          cargo build --locked --example fake_node
-          SCAPEGOAT_BIN=target/debug/examples/fake_node python3 -m unittest wire_tests.test_binary -v
-      - name: The landing page's recording gives the same seven state moves with the binary
+      - name: The field-node installer tests with the real binary checking each rendered config
         run: |
           cargo build --locked
+          SCAPEGOAT_BINARY="$PWD/target/debug/scapegoat" python3 -m unittest discover -s tests -t .
+      - name: The landing page's recording gives the same seven state moves with the binary
+        run: |
           SCAPEGOAT_BIN=target/debug/scapegoat python3 -I site/record.py | tee record.txt
           test "$(grep -E '^ +[a-z]+ -> [a-z]+$' record.txt | sed 's/^ *//' | tr '\n' '|')" = "disabled -> handshaking|handshaking -> establishing|establishing -> established|established -> degraded|degraded -> lost|lost -> establishing|establishing -> established|"
       - name: The static binary
@@ -69,7 +68,7 @@ jobs:
           test "$(./bin/scapegoat --version)" = "scapegoat $(cat VERSION)"
 
   rust-arm64:
-    name: Rust port, arm64 static binary
+    name: arm64 static binary
     runs-on: ubuntu-24.04-arm
     timeout-minutes: 20
     steps:

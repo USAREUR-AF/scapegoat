@@ -35,15 +35,9 @@ FROM_TREE = [
 ]
 
 
-def tree(rel):
-    return ast.parse(open(os.path.join(ROOT, rel)).read())
-
-
-def assigned(rel, name):
-    for n in tree(rel).body:
-        if isinstance(n, ast.Assign) and any(getattr(t, "id", None) == name for t in n.targets):
-            return ast.literal_eval(n.value)
-    raise SystemExit(f"site/build.py: {name} not found in {rel}")
+def rust_states():
+    m = re.search(r"const STATES: \[&str; \d+\] = \[(.*?)\];", open(os.path.join(ROOT, "src", "session.rs")).read(), re.S)
+    return re.findall(r'"([a-z]+)"', m.group(1))
 
 
 # key -> function returning the exact text the page must show. One line per number,
@@ -56,9 +50,10 @@ def check_quotes(page):
     the first screen, and the recorded session the replay plays."""
     bad = 0
     bg = re.search(r'<pre class="bgcode"[^>]*>(.*?)</pre>', page, re.S).group(1)
-    src = open(os.path.join(ROOT, "scapegoat", "core", "session.py")).read()
+    src = "\n".join(re.sub(r"^//! ?", "", l) for l in open(os.path.join(ROOT, "src", "session.rs")).read().splitlines()
+                    if l.startswith("//!"))
     if bg.replace("&gt;", ">").replace("&lt;", "<") not in src:
-        print("site/index.html: the text behind the first screen is no longer in scapegoat/core/session.py")
+        print("site/index.html: the text behind the first screen is no longer in src/session.rs")
         bad += 1
     rec = json.load(open(os.path.join(SITE, "session.json")))
     moves = [l["text"].split(":")[0] for l in rec["lines"] if l.get("kind") == "state"]
@@ -67,7 +62,7 @@ def check_quotes(page):
     if moves != want:
         print(f"site/session.json: state moves {moves}, the page describes {want}; re-record with site/record.py")
         bad += 1
-    states = set(assigned("scapegoat/core/session.py", "STATES"))
+    states = set(rust_states())
     for s in re.findall(r'data-s="([a-z]+)"', page):
         if s not in states:
             print(f"site/index.html: ladder state {s!r} is not in STATES")

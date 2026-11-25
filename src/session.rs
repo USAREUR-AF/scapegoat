@@ -14,10 +14,10 @@
 //!   degraded     -> one expected peer keepalive missed
 //!   lost         -> two consecutive peer keepalives missed (keeps sending)
 //!
-//! Peer candidates: until a sensor answers, every keepalive goes to EVERY candidate address,
-//! each with its own LinkState (its own counters). The first candidate whose IP sends a valid
-//! keepalive becomes the locked peer; the others are dropped until `reset` (or a forced
-//! `lock`).
+//! Peer candidates: until a sensor answers, every keepalive goes to EVERY candidate
+//! address, each with its own LinkState (its own counters). The first candidate
+//! whose IP sends a valid keepalive becomes the locked peer; the others are
+//! dropped until `reset` (or a forced `lock`).
 
 use crate::clock::{self, mono, now_iso, wall};
 use crate::config::{fmt_addr, parse_addr_str, Addr, SessionConfig};

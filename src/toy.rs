@@ -23,7 +23,7 @@ use serde_json::{json, Map, Value};
 pub const KA_LEN: u8 = 10;
 pub const ASK_REPLY: u8 = 1;
 pub const SIMULATOR_FLAG: u8 = 0x01;
-pub const SIM_LOCAL_PROFILE: &str = include_str!("../scapegoat/profiles/sim-local.toml");
+pub const SIM_LOCAL_PROFILE: &str = include_str!("../profiles/sim-local.toml");
 
 fn with_sum(mut body: Vec<u8>) -> Vec<u8> {
     let s = body.iter().map(|b| *b as u32).sum::<u32>() % 256;

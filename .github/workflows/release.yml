@@ -3,8 +3,9 @@
 # Build, sign and publish a release on a tag scapegoat-v<version>.
 #
 # The release is exactly three files:
-#   scapegoat-<version>.tar.gz  the tree at the tag; Python 3 standard library only, so one
-#                               archive serves every machine
+#   scapegoat-<version>.tar.gz  bin/scapegoat (runs the binary for the machine), the static
+#                               binaries bin/x86_64/scapegoat and bin/aarch64/scapegoat, deploy/,
+#                               docs/, profiles/, so one archive serves amd64 and arm64
 #   SHA256SUMS                  the archive's SHA-256
 #   SHA256SUMS.cosign-bundle    the keyless signature over SHA256SUMS by this workflow at the tag
 # The archive also gets a GitHub build provenance attestation. Verify:
@@ -24,7 +25,29 @@ permissions:
   contents: read
 
 jobs:
+  bin:
+    name: binary ${{ matrix.arch }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 20
+    strategy:
+      matrix:
+        include:
+          - {arch: x86_64, runner: ubuntu-24.04}
+          - {arch: aarch64, runner: ubuntu-24.04-arm}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - run: tools/build-bin.sh
+      - run: file "bin/${{ matrix.arch }}/scapegoat" | grep -qE 'static-pie linked|statically linked'
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: bin-${{ matrix.arch }}
+          path: bin/${{ matrix.arch }}/scapegoat
+          if-no-files-found: error
+
   build:
+    needs: bin
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     permissions:
@@ -42,14 +65,22 @@ jobs:
           test "$v" = "$(cat VERSION)" || { echo "::error::tag $v but VERSION $(cat VERSION)"; exit 1; }
           echo "version=$v" >> "$GITHUB_OUTPUT"
       - name: The tests pass at the tag
-        run: python3 -m unittest discover -s tests -t .
-      - name: Archive and SHA256SUMS
-        env:
-          V: ${{ steps.v.outputs.version }}
         run: |
-          mkdir dist
-          git archive --format=tar.gz --prefix="scapegoat-${V}/" -o "dist/scapegoat-${V}.tar.gz" "$GITHUB_REF_NAME"
-          (cd dist && sha256sum "scapegoat-${V}.tar.gz" > SHA256SUMS)
+          cargo test --locked
+          python3 -m unittest discover -s tests -t .
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: bin-x86_64
+          path: bin/x86_64
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: bin-aarch64
+          path: bin/aarch64
+      - run: chmod 0755 bin/x86_64/scapegoat bin/aarch64/scapegoat
+      - name: The binary is the version at the tag
+        run: test "$(./bin/scapegoat --version)" = "scapegoat $(cat VERSION)"
+      - name: Archive and SHA256SUMS
+        run: tools/build-release.sh "${{ steps.v.outputs.version }}"
       - uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
         with:
           cosign-release: 'v2.4.1'

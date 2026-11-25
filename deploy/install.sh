@@ -3,6 +3,10 @@
 #   sudo ./deploy/install.sh              install or upgrade (safe to re-run)
 #   sudo ./deploy/install.sh --uninstall  remove the program and service (keeps /etc/scapegoat)
 #
+# The program is one static binary: bin/<arch>/scapegoat of this checkout or of the unpacked
+# release archive (tools/build-bin.sh builds it), or the file SCAPEGOAT_BINARY names, for
+# example a node binary built from a protocol plugin's crate.
+#
 # Site hooks: every deploy/install.d/*.sh is sourced at each phase with HOOK_PHASE set to
 # after-uninstall, after-program, before-profiles or before-service (none ship with the core).
 set -euo pipefail
@@ -16,15 +20,18 @@ UNIT_DIR="$ROOT/etc/systemd/system"
 UNIT="$UNIT_DIR/scapegoat.service"
 BIN="$ROOT/usr/local/bin"
 WRAPPER="$BIN/scapegoat"
-# Protocol plugins carried by this checkout (plugins/<name>/__init__.py), if any.
+ARCH=$(uname -m); [[ "$ARCH" == arm64 ]] && ARCH=aarch64
+SCAPEGOAT_BINARY=${SCAPEGOAT_BINARY:-$REPO/bin/$ARCH/scapegoat}
+# Protocol plugins carried by this checkout (plugins/<name>/: profiles and a site template;
+# their code is built into the binary).
 PLUGINS=()
-for d in "$REPO"/plugins/*/; do [[ -f "$d/__init__.py" ]] && PLUGINS+=("$(basename "$d")"); done
+for d in "$REPO"/plugins/*/; do [[ -d "$d" ]] && PLUGINS+=("$(basename "$d")"); done
 # Site file template: a plugin's deploy/scapegoat.toml if one ships, else the core default.
 SITE_TEMPLATE="$REPO/deploy/scapegoat.toml"
 for n in "${PLUGINS[@]+"${PLUGINS[@]}"}"; do
   [[ -f "$REPO/plugins/$n/deploy/scapegoat.toml" ]] && { SITE_TEMPLATE="$REPO/plugins/$n/deploy/scapegoat.toml"; break; }
 done
-profile_files() { ls "$REPO"/scapegoat/profiles/*.toml "$REPO"/plugins/*/profiles/*.toml 2>/dev/null || true; }
+profile_files() { ls "$REPO"/profiles/*.toml "$REPO"/plugins/*/profiles/*.toml 2>/dev/null || true; }
 
 if [[ -z "$ROOT" && $EUID -ne 0 ]]; then
   echo "Run as root: sudo $0 $*" >&2
@@ -56,42 +63,27 @@ if [[ -n "${1:-}" ]]; then
   exit 2
 fi
 
-command -v python3 >/dev/null || { echo "python3 is missing. Install it: apt install python3" >&2; exit 1; }
-python3 - <<'PY' || { echo "scapegoat needs Python 3.10 or newer." >&2; exit 1; }
-import sys
-sys.exit(0 if sys.version_info >= (3, 10) else 1)
-PY
+[[ -x "$SCAPEGOAT_BINARY" ]] || { echo "no scapegoat binary at $SCAPEGOAT_BINARY: build it with tools/build-bin.sh, or set SCAPEGOAT_BINARY" >&2; exit 1; }
+"$SCAPEGOAT_BINARY" --version >/dev/null || { echo "$SCAPEGOAT_BINARY does not run on this machine ($ARCH)" >&2; exit 1; }
 
 echo "Installing the program to $PREFIX"
-mkdir -p "$PREFIX"
-rm -rf "$PREFIX/scapegoat.new"
-cp -R "$REPO/scapegoat" "$PREFIX/scapegoat.new"
-find "$PREFIX/scapegoat.new" -name __pycache__ -type d -prune -exec rm -rf {} +
-rm -rf "$PREFIX/scapegoat"
-mv "$PREFIX/scapegoat.new" "$PREFIX/scapegoat"
-
-# Protocol plugins go to $PREFIX/plugins/<name> (the core looks there).
-rm -rf "$PREFIX/plugins"
-for n in "${PLUGINS[@]+"${PLUGINS[@]}"}"; do
-  mkdir -p "$PREFIX/plugins"
-  cp -R "$REPO/plugins/$n" "$PREFIX/plugins/$n"
-  rm -rf "$PREFIX/plugins/$n/tests"
-  find "$PREFIX/plugins/$n" -name __pycache__ -type d -prune -exec rm -rf {} +
-  echo "Installed protocol plugin $n"
-done
+mkdir -p "$PREFIX/bin"
+install -m 755 "$SCAPEGOAT_BINARY" "$PREFIX/bin/scapegoat.new"
+mv "$PREFIX/bin/scapegoat.new" "$PREFIX/bin/scapegoat"
+rm -rf "$PREFIX/scapegoat" "$PREFIX/plugins"    # the Python tree of an earlier version
 
 echo "Writing $WRAPPER"
 mkdir -p "$BIN"
 cat > "$WRAPPER" <<'SH'
 #!/bin/sh
-PYTHONPATH=/opt/scapegoat exec /usr/bin/python3 -m scapegoat "$@"
+exec /opt/scapegoat/bin/scapegoat "$@"
 SH
 chmod 755 "$WRAPPER"
 run_hooks after-program
 
 run_hooks before-profiles
 
-# Shipped profiles (scapegoat/profiles and each plugin's profiles/) are also
+# Shipped profiles (profiles/ and each plugin's profiles/) are also
 # installed in /etc. Shipped names are overwritten; other profiles there are left alone.
 mkdir -p "$CONF_DIR/profiles"
 for f in $(profile_files); do

@@ -1,9 +1,9 @@
 """Shared harness for field-node installer tests: a scratch root and stub system commands.
 
-ip, systemctl, tcpdump, curl, billie, first-bite's tap installer and deploy/install.sh are
-stubs that record their calls and keep a little state, so the installer's phases,
-idempotence, --check, --mode and --uninstall run on any machine without touching its
-network or services.
+ip, systemctl, tcpdump, curl, billie, first-bite's tap installer, deploy/install.sh and
+(unless SCAPEGOAT_BINARY names the real one) the scapegoat binary are stubs that record
+their calls and keep a little state, so the installer's phases, idempotence, --check,
+--mode and --uninstall run on any machine without touching its network or services.
 """
 
 import hashlib
@@ -84,9 +84,7 @@ PY
         R="$FIELD_NODE_ROOT"
         if [ "$1" = "--uninstall" ]; then rm -rf "$R/opt/scapegoat" "$R/usr/local/bin/scapegoat" "$R/etc/systemd/system/scapegoat.service"; rm -f "$STATE/active/scapegoat.service"; exit 0; fi
         mkdir -p "$R/opt/scapegoat" "$R/usr/local/bin" "$R/etc/systemd/system" "$STATE/active"
-        rm -rf "$R/opt/scapegoat/scapegoat"; cp -R "$REPO/scapegoat" "$R/opt/scapegoat/scapegoat"
-        find "$R/opt/scapegoat/scapegoat" -name __pycache__ -type d -prune -exec rm -rf {} +
-        if [ -d "$REPO/plugins" ]; then rm -rf "$R/opt/scapegoat/plugins"; cp -R "$REPO/plugins" "$R/opt/scapegoat/plugins"; fi
+        mkdir -p "$R/opt/scapegoat/bin"; cp "$SCAPEGOAT_BINARY" "$R/opt/scapegoat/bin/scapegoat"
         cp "$REPO/deploy/scapegoat.service" "$R/etc/systemd/system/scapegoat.service"
         printf '#!/bin/sh\n' > "$R/usr/local/bin/scapegoat"; chmod 755 "$R/usr/local/bin/scapegoat"
         touch "$STATE/active/scapegoat.service"''',
@@ -115,6 +113,12 @@ class FieldNodeCase(unittest.TestCase):
         (dict_src / self.DICT_INTERFACE / "metadata.json").write_text("{}\n")
         bundle = self.tmp / f"{self.KID[0]}_{self.KID[1]}.tar.gz"
         bundle.write_bytes(b"bundle")
+        # The scapegoat binary: $SCAPEGOAT_BINARY (CI builds it), else a stand-in that accepts
+        # every command (it checks no config).
+        self.binary = os.environ.get("SCAPEGOAT_BINARY") or str(self.stubs / "scapegoat-binary")
+        if not os.environ.get("SCAPEGOAT_BINARY"):
+            (self.stubs / "scapegoat-binary").write_text("#!/bin/sh\nexit 0\n")
+            (self.stubs / "scapegoat-binary").chmod(0o755)
         mind = self.root / "usr/local/bin/mind"   # first-bite's tap needs mind installed
         mind.parent.mkdir(parents=True)
         mind.write_text("#!/bin/sh\n")
@@ -126,6 +130,7 @@ class FieldNodeCase(unittest.TestCase):
     def run_driver(self, *args, site=True):
         env = dict(os.environ, FIELD_NODE_ROOT=str(self.root), STATE=str(self.state),
                    REPO=str(REPO), SCAPEGOAT_INSTALL=str(self.stubs / "scapegoat-install"),
+                   SCAPEGOAT_BINARY=self.binary,
                    PATH=f"{self.stubs}:{os.environ['PATH']}")
         env.pop("SCAPEGOAT_PLUGIN_PATH", None)
         cmd = ["bash", str(DRIVER)] + (["--site", str(self.site)] if site else []) + list(args)

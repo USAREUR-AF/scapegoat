@@ -224,3 +224,19 @@ fn test_no_summary_shows_up_to_six_fields() {
     assert!(line.contains("f5=5"));
     assert!(!line.contains("f6="));
 }
+
+// ---- the installer's config check (deploy/field-node/components/scapegoat-field-config)
+#[test]
+fn test_check_config() {
+    let root = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    let run = |argv: &[&str]| crate::api::run_cli(argv.iter().map(|s| s.to_string()).collect());
+    let (code, out, err) = run(&["check-config", root.join("deploy/scapegoat.example.toml").to_str().unwrap()]);
+    assert_eq!((code, out.as_str(), err.as_str()), (0, "", ""));
+    let d = crate::core::tempdir("checkconfig");
+    let bad = d.join("bad.toml");
+    std::fs::write(&bad, "[sessions.a]\nprotocol = \"toy\"\n").unwrap();
+    let (code, _, err) = run(&["check-config", bad.to_str().unwrap()]);
+    assert_eq!(code, 1);
+    assert!(err.contains("config problem: sessions.a.peer is required"), "{err}");
+    let _ = std::fs::remove_dir_all(&d);
+}

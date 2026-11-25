@@ -13,7 +13,7 @@ One static page: no framework, no external requests, no web fonts, light and dar
 | `assets/icon.svg` | the page icon |
 | `assets/from-tree/` | git-ignored; written by `build.py` from the tree |
 | `session.json` | the session the first screen replays, written by `record.py` |
-| `record.py` | records `session.json`: `scapegoat serve` and `scapegoat sim toy` on 127.0.0.1, the simulator stopped once and started again (about 40 s) |
+| `record.py` | records `session.json`: `bin/scapegoat serve` and `bin/scapegoat sim toy` on 127.0.0.1 (`SCAPEGOAT_BIN` names another binary), the simulator stopped once and started again (about 40 s) |
 | `build.py` | copies `assets/from-tree/`, checks every number and placeholder, runs `fitcheck.py` |
 | `fitcheck.py` | loads the page in headless Chrome at 1440 and 390 px; fails when a command box is cut off or the page scrolls sideways |
 
