@@ -9,6 +9,7 @@ pub mod api;
 pub mod cli;
 pub mod clock;
 pub mod config;
+pub mod conformance;
 pub mod destinations;
 pub mod http;
 pub mod ipnet;

@@ -114,7 +114,7 @@ pub trait Protocol: Send {
         30.0
     }
 
-    /// Bytes of one keepalive. Call `link.next_tx()` once for its transmit counter.
+    /// Bytes of one keepalive. Call `link.next_tx()` once for its sequence number.
     fn keepalive(&mut self, link: &mut LinkState, action: i64) -> HookResult<Vec<u8>>;
     /// Never fails on bad input: a problem goes in `Decoded::problems`.
     fn decode(&mut self, datagram: &[u8]) -> Decoded;
