@@ -23,6 +23,7 @@ name = "rust"
 path = "tests/rust/main.rs"
 
 [dependencies]
+clap = { version = "4.5", default-features = false, features = ["std", "help", "usage", "error-context"] }
 getrandom = "=0.3.4"
 libc = "0.2.191"
 serde_json = { version = "1.0.154", features = ["preserve_order"] }

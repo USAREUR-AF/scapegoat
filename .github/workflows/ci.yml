@@ -47,6 +47,15 @@ jobs:
           cargo fmt --check
           cargo clippy --locked --all-targets -- -D warnings
           cargo test --locked
+      - name: The Python API and CLI tests, against a node binary over the wire
+        run: |
+          cargo build --locked --example fake_node
+          SCAPEGOAT_BIN=target/debug/examples/fake_node python3 -m unittest wire_tests.test_binary -v
+      - name: The landing page's recording gives the same seven state moves with the binary
+        run: |
+          cargo build --locked
+          SCAPEGOAT_BIN=target/debug/scapegoat python3 -I site/record.py | tee record.txt
+          test "$(grep -E '^ +[a-z]+ -> [a-z]+$' record.txt | sed 's/^ *//' | tr '\n' '|')" = "disabled -> handshaking|handshaking -> establishing|establishing -> established|established -> degraded|degraded -> lost|lost -> establishing|establishing -> established|"
       - name: The static binary
         run: tools/build-bin.sh
       - name: The binary is static and its version is VERSION
