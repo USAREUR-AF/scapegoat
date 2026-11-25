@@ -601,10 +601,12 @@ fn plugin_profile_dirs() -> Vec<String> {
     out
 }
 
-/// Site profiles dir, the profiles built into the binary, then profiles found beside
-/// plugins on the plugin path.
+/// Site profiles dir, any dirs a site extension adds, the profiles built into the binary,
+/// then profiles found beside plugins on the plugin path.
 pub fn profile_dirs(profiles_dir: Option<&str>) -> Vec<String> {
-    let mut dirs = vec![profiles_dir.unwrap_or(DEFAULT_PROFILES_DIR).to_string(), BUILTIN_PROFILES.to_string()];
+    let mut dirs = vec![profiles_dir.unwrap_or(DEFAULT_PROFILES_DIR).to_string()];
+    dirs.extend(crate::extension::current().profile_dirs);
+    dirs.push(BUILTIN_PROFILES.to_string());
     dirs.extend(plugin_profile_dirs());
     let mut seen = vec![];
     for d in dirs {

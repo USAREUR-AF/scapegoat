@@ -15,20 +15,36 @@ pub const DEFAULT_CONFIG: &str = "/etc/scapegoat/scapegoat.toml";
 pub const NET_CONTROL: [&str; 6] = ["addr_add", "addr_del", "link_up", "link_down", "neigh_flush", "fw_allow"];
 
 pub fn default_api() -> String {
-    std::env::var("SCAPEGOAT_API").ok().filter(|v| !v.is_empty()).unwrap_or("http://127.0.0.1:8730".into())
+    crate::extension::env("SCAPEGOAT_API").0.unwrap_or("http://127.0.0.1:8730".into())
 }
 
-/// --config, then $SCAPEGOAT_CONFIG, then /etc/scapegoat/scapegoat.toml.
-pub fn resolve_config(explicit: Option<&str>) -> String {
+/// --config, then $SCAPEGOAT_CONFIG, then /etc/scapegoat/scapegoat.toml (then any fallback a
+/// site extension declares). -> (path, note).
+pub fn resolve_config(explicit: Option<&str>) -> (String, String) {
+    resolve_config_in(&crate::extension::current(), explicit, |n| std::env::var(n).ok(), |p| std::path::Path::new(p).exists())
+}
+
+/// [`resolve_config`] with the extension, environment and file check given.
+pub fn resolve_config_in(
+    ext: &crate::extension::Extension,
+    explicit: Option<&str>,
+    getenv: impl Fn(&str) -> Option<String>,
+    exists: impl Fn(&str) -> bool,
+) -> (String, String) {
     if let Some(e) = explicit {
-        return e.into();
+        return (e.into(), String::new());
     }
-    if let Ok(p) = std::env::var("SCAPEGOAT_CONFIG") {
-        if !p.is_empty() {
-            return p;
+    if let (Some(p), note) = ext.env("SCAPEGOAT_CONFIG", getenv) {
+        return (p, note);
+    }
+    if !exists(DEFAULT_CONFIG) {
+        for old in &ext.config_fallbacks {
+            if exists(old) {
+                return (old.clone(), ext.fallback_note(old, DEFAULT_CONFIG));
+            }
         }
     }
-    DEFAULT_CONFIG.into()
+    (DEFAULT_CONFIG.into(), String::new())
 }
 
 pub fn state_mark(state: &str) -> String {
@@ -1329,7 +1345,10 @@ fn cmd_net(c: &mut Ctx, m: &ArgMatches) -> R<()> {
 
 fn cmd_serve(io: &mut Io, m: &ArgMatches) -> R<i32> {
     crate::log::init(if m.get_flag("verbose") { crate::log::Level::Debug } else { crate::log::Level::Info });
-    let path = resolve_config(m.get_one::<String>("config").map(String::as_str));
+    let (path, note) = resolve_config(m.get_one::<String>("config").map(String::as_str));
+    if !note.is_empty() {
+        crate::log::warning("scapegoat", &note);
+    }
     let mut cfg = crate::config::load(&path, m.get_one::<String>("profile").map(String::as_str))
         .map_err(|e| CliError(format!("config problem: {e}")))?;
     if !cfg.profile.is_empty() {

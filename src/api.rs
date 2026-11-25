@@ -31,7 +31,8 @@ enum Body {
 type R = Result<(u16, Body), ApiError>;
 
 fn source(req: &Request) -> String {
-    let src = req.header("X-Scapegoat-Source").filter(|v| !v.is_empty()).unwrap_or("api").trim().to_lowercase();
+    let src = crate::extension::current().header(|n| req.header(n), "X-Scapegoat-Source");
+    let src = if src.is_empty() { "api".to_string() } else { src.trim().to_lowercase() };
     if ["cli", "ui", "api"].contains(&src.as_str()) {
         src
     } else {
@@ -41,7 +42,7 @@ fn source(req: &Request) -> String {
 
 /// Who/where for the audit trail: the CLI's user name, else the client address.
 fn who(req: &Request) -> String {
-    let user: String = req.header("X-Scapegoat-User").unwrap_or("").trim().chars().take(64).collect();
+    let user: String = crate::extension::current().header(|n| req.header(n), "X-Scapegoat-User").trim().chars().take(64).collect();
     let addr = req.client.ip().to_string();
     if user.is_empty() {
         addr

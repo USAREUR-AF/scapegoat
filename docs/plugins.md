@@ -42,6 +42,18 @@ fn main() {
 sessions using the plugin's protocol; feature aliases apply whenever the plugin is in the
 binary. Setting both an old name and its new name refuses the config.
 
+A node binary can also keep a deployment's earlier names working with site extension tables,
+`Registry::with_extension(scapegoat::extension::Extension { .. })`. Every table is optional;
+the open binary installs none.
+
+| Field | Effect |
+|---|---|
+| `env_aliases`, `env_notes` | `SCAPEGOAT_API` and `SCAPEGOAT_CONFIG` fall back to other variable names; a note (logged by `serve`) for a deprecated name |
+| `config_fallbacks`, `config_fallback_note` | config paths tried when `/etc/scapegoat/scapegoat.toml` does not exist, and the note logged when one is used (`{path}`, `{default}`) |
+| `profile_dirs` | profile directories searched after `/etc/scapegoat/profiles` |
+| `header_aliases` | other request header names for `X-Scapegoat-Source` and `X-Scapegoat-User` |
+| `extra_island_urls` | `fn(base, config, session) -> Vec<String>`: more island status URLs beside `scapegoat/<node>/<session>/status`; it can read any config key from `config.raw` |
+
 A site config names a protocol that is not compiled into the binary: the session reports
 `protocol "<name>" is not installed: this binary (<file>) has toy, ...`. `plugin_path` and
 `SCAPEGOAT_PLUGIN_PATH` are still read for the profiles a plugin ships as files

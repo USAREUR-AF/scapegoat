@@ -249,11 +249,13 @@ impl Service {
         }
     }
 
-    /// scapegoat/<node>/<session>/status.
+    /// scapegoat/<node>/<session>/status (plus any URL a site extension adds).
     pub fn island_urls(&self, sid: &str) -> Vec<String> {
         let c = self.cfg();
         let base = c.island_rest.trim_end_matches('/');
-        vec![format!("{base}/scapegoat/{}/{sid}/status", c.node_name)]
+        let mut urls = vec![format!("{base}/scapegoat/{}/{sid}/status", c.node_name)];
+        urls.extend(crate::extension::current().island_urls(base, &c, sid));
+        urls
     }
 
     // -------------------------------------------------------------- API helpers
