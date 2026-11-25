@@ -8,6 +8,7 @@ mod cli;
 mod core;
 mod forward;
 mod latch;
+mod net;
 mod node;
 mod outputs;
 mod support;
