@@ -3,8 +3,11 @@
 //! The Rust form of the Python suite in tests/. Each module names the Python file it covers;
 //! each test keeps the Python test's name.
 
+mod api;
+mod cli;
 mod core;
 mod forward;
 mod latch;
+mod node;
 mod support;
 mod traffic;

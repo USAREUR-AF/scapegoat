@@ -2,6 +2,7 @@
 """Record the landing page's first screen: a real scapegoat session against the toy simulator.
 
     python3 -I site/record.py          # writes site/session.json (about 40 s)
+    SCAPEGOAT_BIN=bin/scapegoat python3 -I site/record.py     # the same, with the binary
 
 It starts `scapegoat serve` with the laptop config (deploy/scapegoat.toml, profile
 sim-local) on loopback, starts `scapegoat sim toy` a few seconds later, stops the
@@ -20,7 +21,7 @@ import urllib.request
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(ROOT, "site", "session.json")
 API = "http://127.0.0.1:18730"
-PY = [sys.executable, "-m", "scapegoat"]
+PY = [os.environ["SCAPEGOAT_BIN"]] if os.environ.get("SCAPEGOAT_BIN") else [sys.executable, "-m", "scapegoat"]
 
 
 def get(path):
