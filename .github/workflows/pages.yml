@@ -13,18 +13,16 @@ on:
   pull_request:
     paths:
       - 'site/**'
-      - 'scapegoat/core/session.py'
-      - 'scapegoat/core/outputs.py'
-      - 'scapegoat/**/*.py'
+      - 'src/**'
+      - 'rust-toolchain.toml'
       - 'tests/**'
       - '.github/workflows/pages.yml'
   push:
     branches: [main]
     paths:
       - 'site/**'
-      - 'scapegoat/core/session.py'
-      - 'scapegoat/core/outputs.py'
-      - 'scapegoat/**/*.py'
+      - 'src/**'
+      - 'rust-toolchain.toml'
       - 'tests/**'
       - '.github/workflows/pages.yml'
   workflow_dispatch:

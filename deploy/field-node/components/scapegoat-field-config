@@ -111,12 +111,12 @@ EOT
 }
 
 validate() {
-  local prog="$ROOT/opt/scapegoat" tmp rc=0
-  [[ -d "$prog/scapegoat" ]] || prog=${FIELD_PROGRAM:-}
-  [[ -n "$prog" && -d "$prog/scapegoat" ]] || { echo "$ME: scapegoat not found; config not validated" >&2; return 0; }
+  local bin="$ROOT/opt/scapegoat/bin/scapegoat" tmp rc=0
+  [[ -x "$bin" ]] || bin=${SCAPEGOAT_BINARY:-}
+  [[ -n "$bin" && -x "$bin" ]] || { echo "$ME: scapegoat not found; config not validated" >&2; return 0; }
   tmp=$(mktemp)
   printf '%s\n' "$1" > "$tmp"
-  PYTHONPATH="$prog" python3 -c 'import sys; from scapegoat.core import config; config.load(sys.argv[1])' "$tmp" || rc=$?
+  "$bin" check-config "$tmp" || rc=$?
   rm -f "$tmp"
   [[ $rc -eq 0 ]] || { echo "$ME: the rendered config is refused by scapegoat (above); nothing changed" >&2; exit 1; }
 }

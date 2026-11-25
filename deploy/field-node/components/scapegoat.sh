@@ -6,13 +6,17 @@
 #   - the mode hook scapegoat-field-config: on every mode switch it renders
 #     /etc/scapegoat/scapegoat.toml from the site file and the pack (checked by scapegoat's
 #     own loader first) and restarts scapegoat if the file changed
-#   - the scapegoat program and service (deploy/install.sh of this checkout)
+#   - the scapegoat program and service (deploy/install.sh of this checkout), from the binary
+#     SCAPEGOAT_BINARY (default bin/<arch>/scapegoat of this checkout)
 # Needs the network component (the pack's modes) and a pack with SESSION_ID and SENSOR_PORT.
 # Sourced by install-field-node.sh.
 
 scapegoat_phases=2
 FIELD_HOOKS+=("$HERE/components/scapegoat-field-config")
 SCAPEGOAT_INSTALL=${SCAPEGOAT_INSTALL:-$REPO/deploy/install.sh}
+SCAPEGOAT_ARCH=$(uname -m); [[ "$SCAPEGOAT_ARCH" == arm64 ]] && SCAPEGOAT_ARCH=aarch64
+SCAPEGOAT_BINARY=${SCAPEGOAT_BINARY:-$REPO/bin/$SCAPEGOAT_ARCH/scapegoat}
+export SCAPEGOAT_BINARY
 
 scapegoat_preflight() {
   # shellcheck disable=SC2086
@@ -21,6 +25,7 @@ scapegoat_preflight() {
   local v
   for v in ${REQUIRED_VARS:-}; do [[ -n "${!v:-}" ]] || die "$v is empty (the $PACK_NAME pack needs it)"; done
   [[ -f "$PACK/session.toml.in" ]] || die "pack $PACK_NAME has no session.toml.in"
+  [[ -x "$SCAPEGOAT_BINARY" ]] || die "no scapegoat binary at $SCAPEGOAT_BINARY (build it with tools/build-bin.sh, or set SCAPEGOAT_BINARY)"
 }
 
 scapegoat_pre() {   # before the network component applies the mode (the hook must be there)
@@ -43,8 +48,7 @@ scapegoat_pre() {   # before the network component applies the mode (the hook mu
 
 scapegoat_apply() {
   phase "scapegoat program (/opt/scapegoat, service scapegoat)"
-  if [[ -d "$ROOT/opt/scapegoat/scapegoat" ]] &&
-     diff -rq -x __pycache__ "$REPO/scapegoat" "$ROOT/opt/scapegoat/scapegoat" >/dev/null 2>&1 &&
+  if same_file "$SCAPEGOAT_BINARY" "$ROOT/opt/scapegoat/bin/scapegoat" &&
      same_file "$REPO/deploy/scapegoat.service" "$UNIT_DIR/scapegoat.service" &&
      [[ -x "$BIN_DIR/scapegoat" ]]; then
     ok "installed and current"

@@ -45,7 +45,7 @@ dropped until `reset` (or a forced `lock`).</pre>
         <a class="btn" href="https://github.com/USAREUR-AF/scapegoat#readme">README</a>
         <a class="btn" href="https://github.com/USAREUR-AF/scapegoat/blob/main/docs/plugins.md">Write a plugin</a>
       </div>
-      <div class="cmd"><pre data-box="command"><span class="ln"><span class="dollar">$ </span><code id="c-start">python3 <span class="w">-m</span> scapegoat sim toy <span class="w">--bind</span> <span class="w">127.0.0.1:47001</span> &amp; python3 <span class="w">-m</span> scapegoat serve <span class="w">--config</span> <span class="w">deploy/scapegoat.toml</span></code></span></pre><button class="copy" type="button" data-copy="c-start">Copy</button></div>
+      <div class="cmd"><pre data-box="command"><span class="ln"><span class="dollar">$ </span><code id="c-start">bin/scapegoat sim toy <span class="w">--bind</span> <span class="w">127.0.0.1:47001</span> &amp; bin/scapegoat serve <span class="w">--config</span> <span class="w">deploy/scapegoat.toml</span></code></span></pre><button class="copy" type="button" data-copy="c-start">Copy</button></div>
     </div>
 
     <div class="stage" role="img" aria-label="A recorded scapegoat session against the toy simulator, replayed. scapegoat sends keepalives with no answer, the simulator starts and answers, and the link goes from handshaking to establishing to established. The simulator is stopped: one missed keepalive makes the link degraded, a second makes it lost, and scapegoat keeps sending. The simulator starts again and the link is established again.">
@@ -72,9 +72,9 @@ dropped until `reset` (or a forced `lock`).</pre>
     <h2>What it is</h2>
     <p class="sub">A sensor on a local network can wait for its C2 system to speak before it sends anything. scapegoat is that first voice. It runs as a <code>systemd</code> service on a Raspberry Pi or any Linux computer next to the sensor, with no internet access needed. It is part of goat: its tracks reach the data fabric as standard formats encoded by <a href="https://usareur-af.github.io/goat-transformers/">goat-transformers</a>, and a whole node around it is built from one site file.</p>
     <div class="cards">
-      <div class="card"><h3>It speaks first and keeps the link alive</h3><p>One UDP socket per sensor sends and receives. A keepalive goes to every candidate address until one answers; scapegoat then locks onto it and keeps the schedule going, even after the sensor goes quiet. <code>scapegoat/core/session.py</code></p></div>
+      <div class="card"><h3>It speaks first and keeps the link alive</h3><p>One UDP socket per sensor sends and receives. A keepalive goes to every candidate address until one answers; scapegoat then locks onto it and keeps the schedule going, even after the sensor goes quiet. <code>src/session.rs</code></p></div>
       <div class="card"><h3>It shows whether the sensor is answering</h3><p><code>scapegoat status</code>, <code>events</code> and <code>watch</code> on the command line, and the same view on a web page at <code>127.0.0.1:8730</code> with no build step. Every message is logged with its decoded fields and any problem found in it.</p></div>
-      <div class="card"><h3>A protocol is a plugin</h3><p>The core owns sockets, timers and state; a plugin builds and reads bytes and names its own device. The <code>toy</code> protocol and its simulator ship with the core, and <code>scapegoat/conformance</code> checks any plugin against the contract. <a href="https://github.com/USAREUR-AF/scapegoat/blob/main/docs/plugins.md"><code>docs/plugins.md</code></a></p></div>
+      <div class="card"><h3>A protocol is a plugin</h3><p>The core owns sockets, timers and state; a plugin builds and reads bytes and names its own device. The <code>toy</code> protocol and its simulator ship with the core, and <code>src/conformance.rs</code> checks any plugin against the contract. <a href="https://github.com/USAREUR-AF/scapegoat/blob/main/docs/plugins.md"><code>docs/plugins.md</code></a></p></div>
     </div>
   </div>
 </section>
@@ -105,7 +105,7 @@ dropped until `reset` (or a forced `lock`).</pre>
         <path class="a" d="M558 206V96" marker-end="url(#ah)"/><text class="l e" x="550" y="154">reply</text>
         <text class="n" x="558" y="282">keeps sending keepalives</text>
       </svg>
-      <figcaption>The states and transitions in <code>scapegoat/core/session.py</code>. With the <code>sim-local</code> profile, three replies establish the link.</figcaption>
+      <figcaption>The states and transitions in <code>src/session.rs</code>. With the <code>sim-local</code> profile, three replies establish the link.</figcaption>
     </figure>
   </div>
 </section>
@@ -146,14 +146,14 @@ dropped until `reset` (or a forced `lock`).</pre>
 <section class="band" id="start">
   <div class="wrap">
     <h2>Quick start</h2>
-    <p class="sub">Python 3.11 or newer on Linux or macOS. Nothing else to install.</p>
+    <p class="sub">One static binary for Linux, amd64 or arm64. Nothing else to install.</p>
     <pre class="block" data-box="command"><span class="ln">git clone <span class="w">https://github.com/USAREUR-AF/scapegoat</span>
 </span><span class="ln">cd <span class="w">scapegoat</span>
-</span><span class="ln">python3 -m scapegoat sim toy --bind 127.0.0.1:47001 &amp;
-</span><span class="ln">python3 -m scapegoat serve --config <span class="w">deploy/scapegoat.toml</span> &amp;
-</span><span class="ln">python3 -m scapegoat status
-</span><span class="ln">python3 -m scapegoat watch sensor</span></pre>
-    <p>Then open <code>http://127.0.0.1:8730</code>. Tests: <code>python3 -m unittest discover -s tests -t .</code></p>
+</span><span class="ln">bin/scapegoat sim toy --bind 127.0.0.1:47001 &amp;
+</span><span class="ln">bin/scapegoat serve --config <span class="w">deploy/scapegoat.toml</span> &amp;
+</span><span class="ln">bin/scapegoat status
+</span><span class="ln">bin/scapegoat watch sensor</span></pre>
+    <p>Then open <code>http://127.0.0.1:8730</code>. Build: <code>tools/build-bin.sh</code>. Tests: <code>cargo test</code></p>
     <p><a href="https://github.com/USAREUR-AF/scapegoat#readme">README</a> &middot; <a href="https://github.com/USAREUR-AF/scapegoat/blob/main/docs/plugins.md">Writing a protocol plugin</a> &middot; <a href="https://github.com/USAREUR-AF/scapegoat/blob/main/deploy/field-node/README.md">Field node</a></p>
   </div>
 </section>

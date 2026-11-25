@@ -2,11 +2,28 @@
 
 ## Unreleased
 
+scapegoat is written in Rust (ADR 0002). It is one statically linked binary for amd64 or
+arm64; both are in the release archive, with `bin/scapegoat`, which runs the one for the
+machine.
+
+Config files and profiles, the HTTP API, the web page, the CLI and its output, the
+environment variables and the wire behavior are unchanged, so deployed nodes and their configs
+keep working. `deploy/install.sh` installs the binary to `/opt/scapegoat/bin/scapegoat` and
+removes an earlier version's Python tree; the systemd unit runs the binary.
+
+A protocol plugin is now a Rust crate that depends on this one and builds its own node binary
+(`docs/plugins.md`); a Python plugin no longer loads. The C2 outputs link the goat-transformers
+Rust engine and still read its packs and model from `[transformers] path`.
+
+`scapegoat check-config <file>` checks a config file the way `serve` loads it; the field-node
+`scapegoat` component uses it.
+
 - The `toy` protocol's keepalive fields are `seq`, `ack`, `ask` and `flags`; its actions are
   `ping` and `ask_reply` (`ask = 1`). Its default keepalive interval is 10 s.
 - The gate for actions that make a device transmit is named for that: `allow_transmit_control`,
   `[features] transmit_control`, and the plugin attribute `transmit_actions`.
-- A plugin can keep old config key names working with `CONFIG_ALIASES` (`docs/plugins.md`).
+- A plugin can keep old config key names working with `config_aliases` on its registry
+  entry (`docs/plugins.md`).
 
 ## 0.1.0
 

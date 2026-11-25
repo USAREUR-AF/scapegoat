@@ -11,7 +11,7 @@ use serde_json::{json, Map, Value};
 use std::sync::Arc;
 
 /// The web page, built into the binary.
-pub const UI: &[u8] = include_bytes!("../scapegoat/ui/index.html");
+pub const UI: &[u8] = include_bytes!("../ui/index.html");
 /// Read-only network probes (scapegoat net ping / capture / udp_probe).
 pub const PROBE_ACTIONS: [&str; 3] = ["ping", "capture", "udp_probe"];
 

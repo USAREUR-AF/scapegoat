@@ -1515,6 +1515,13 @@ pub fn build_parser() -> Command {
     }
     p = p.subcommand(net);
     p = p.subcommand(
+        Command::new("check-config")
+            .about("check a config file the way serve loads it (for installers)")
+            .hide(true)
+            .arg(Arg::new("path").required(true).help("config file"))
+            .arg(Arg::new("profile").long("profile").value_name("NAME").help("profile to layer the config over")),
+    );
+    p = p.subcommand(
         Command::new("sim")
             .about("run a sensor simulator (for tests and demos)")
             .long_about("Run a simulator: `toy` ships with scapegoat; protocol plugins add their own. `scapegoat sim toy --help` shows its options.")
@@ -1582,6 +1589,9 @@ pub fn main_io(argv: Vec<String>, io: &mut Io) -> i32 {
     let json_out = sm.get_flag("json") || m.get_flag("json");
     let r: R<i32> = match cmd {
         "serve" => cmd_serve(io, sm),
+        "check-config" => crate::config::load(sm.get_one::<String>("path").unwrap(), sm.get_one::<String>("profile").map(String::as_str))
+            .map(|_| 0)
+            .map_err(|e| CliError(format!("config problem: {e}"))),
         "sim" => Ok(run_sim(io, sm.get_one::<String>("which").unwrap(), vec![])),
         _ => {
             let mut c = Ctx { io, api, json: json_out };
@@ -1603,7 +1613,7 @@ pub fn main_io(argv: Vec<String>, io: &mut Io) -> i32 {
         }
     };
     match r {
-        Ok(_) if cmd != "serve" && cmd != "sim" && crate::signals::stopped() => 130,
+        Ok(_) if cmd == "watch" && crate::signals::stopped() => 130,
         Ok(code) => code,
         Err(CliError(msg)) => {
             let _ = writeln!(io.err, "scapegoat: {msg}");
