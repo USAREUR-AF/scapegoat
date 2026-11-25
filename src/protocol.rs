@@ -267,6 +267,7 @@ pub struct ConfigAliases {
 #[derive(Clone, Default)]
 pub struct Registry {
     plugins: Vec<Plugin>,
+    extension: crate::extension::Extension,
 }
 
 static REGISTRY: RwLock<Option<Arc<Registry>>> = RwLock::new(None);
@@ -286,6 +287,16 @@ impl Registry {
     pub fn with(mut self, p: Plugin) -> Self {
         self.register(p);
         self
+    }
+
+    /// Give the registry site extension tables (`extension.rs`).
+    pub fn with_extension(mut self, e: crate::extension::Extension) -> Self {
+        self.extension = e;
+        self
+    }
+
+    pub fn extension(&self) -> &crate::extension::Extension {
+        &self.extension
     }
 
     pub fn get(&self, name: &str) -> Option<&Plugin> {

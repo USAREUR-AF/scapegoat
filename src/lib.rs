@@ -11,6 +11,7 @@ pub mod clock;
 pub mod config;
 pub mod conformance;
 pub mod destinations;
+pub mod extension;
 pub mod http;
 pub mod ipnet;
 pub mod log;

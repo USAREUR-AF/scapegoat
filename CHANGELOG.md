@@ -24,6 +24,9 @@ Rust engine and still read its packs and model from `[transformers] path`.
   `[features] transmit_control`, and the plugin attribute `transmit_actions`.
 - A plugin can keep old config key names working with `config_aliases` on its registry
   entry (`docs/plugins.md`).
+- A node binary can give the registry site extension tables (`src/extension.rs`): environment
+  variable and request header aliases, config fallback paths, extra profile directories and
+  extra island status URLs, as the Python core's `scapegoat/core/ext.py` read them.
 
 ## 0.1.0
 

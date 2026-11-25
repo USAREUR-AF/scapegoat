@@ -516,3 +516,90 @@ mod local_seen_as {
         assert_eq!(config::from_dict(&json!({"node_role": " C2 node "}), "").unwrap().node_role, "C2 node");
     }
 }
+
+/// Site extension tables (src/extension.rs), with neutral example names.
+mod site_extension {
+    use scapegoat::cli::{resolve_config_in, DEFAULT_CONFIG};
+    use scapegoat::config;
+    use scapegoat::extension::Extension;
+    use serde_json::json;
+
+    fn example() -> Extension {
+        fn extra(base: &str, cfg: &config::Config, sid: &str) -> Vec<String> {
+            vec![format!("{base}/earlier/{}/{sid}/status", cfg.node_name)]
+        }
+        Extension {
+            env_aliases: vec![
+                ("SCAPEGOAT_CONFIG".into(), vec!["EARLIER_CONFIG".into()]),
+                ("SCAPEGOAT_API".into(), vec!["EARLIER_API".into()]),
+            ],
+            env_notes: vec![("EARLIER_CONFIG".into(), "EARLIER_CONFIG is deprecated: use SCAPEGOAT_CONFIG".into())],
+            config_fallbacks: vec!["/etc/earlier/earlier.toml".into()],
+            config_fallback_note: "reading the old config {path}; move it to {default}".into(),
+            profile_dirs: vec!["/etc/earlier/profiles".into()],
+            header_aliases: vec![("X-Scapegoat-Source".into(), vec!["X-Earlier-Source".into()])],
+            extra_island_urls: Some(extra),
+        }
+    }
+
+    fn env<'a>(vars: &'a [(&'a str, &'a str)]) -> impl Fn(&str) -> Option<String> + 'a {
+        move |n| vars.iter().find(|(k, _)| *k == n).map(|(_, v)| v.to_string())
+    }
+
+    #[test]
+    fn test_no_extension_is_the_plain_behavior() {
+        let e = Extension::default();
+        assert_eq!(e.env("SCAPEGOAT_API", env(&[("EARLIER_API", "x")])), (None, String::new()));
+        assert_eq!(resolve_config_in(&e, None, env(&[]), |_| true), (DEFAULT_CONFIG.to_string(), String::new()));
+        assert_eq!(resolve_config_in(&e, None, env(&[]), |_| false), (DEFAULT_CONFIG.to_string(), String::new()));
+        assert_eq!(e.header(|_| Some("cli"), "X-Scapegoat-Source"), "cli");
+        assert_eq!(e.header(|_| None, "X-Scapegoat-Source"), "");
+        let cfg = config::from_dict(&json!({"node_name": "n1"}), "").unwrap();
+        assert!(e.island_urls("http://h", &cfg, "s").is_empty());
+        assert_eq!(config::profile_dirs(None)[0], "/etc/scapegoat/profiles");
+    }
+
+    #[test]
+    fn test_env_alias_and_note() {
+        let e = example();
+        assert_eq!(e.env("SCAPEGOAT_API", env(&[("EARLIER_API", "http://a")])), (Some("http://a".into()), String::new()));
+        assert_eq!(
+            e.env("SCAPEGOAT_API", env(&[("SCAPEGOAT_API", "http://b"), ("EARLIER_API", "http://a")])).0.as_deref(),
+            Some("http://b")
+        );
+        assert_eq!(e.env("SCAPEGOAT_API", env(&[("SCAPEGOAT_API", ""), ("EARLIER_API", "http://a")])).0.as_deref(), Some("http://a"));
+        let (v, note) = e.env("SCAPEGOAT_CONFIG", env(&[("EARLIER_CONFIG", "/x.toml")]));
+        assert_eq!(v.as_deref(), Some("/x.toml"));
+        assert!(note.contains("deprecated"));
+    }
+
+    #[test]
+    fn test_config_fallback() {
+        let e = example();
+        let only_old = |p: &str| p == "/etc/earlier/earlier.toml";
+        let (path, note) = resolve_config_in(&e, None, env(&[]), only_old);
+        assert_eq!(path, "/etc/earlier/earlier.toml");
+        assert_eq!(note, "reading the old config /etc/earlier/earlier.toml; move it to /etc/scapegoat/scapegoat.toml");
+        assert_eq!(resolve_config_in(&e, None, env(&[]), |_| true), (DEFAULT_CONFIG.to_string(), String::new()));
+        assert_eq!(resolve_config_in(&e, None, env(&[]), |_| false), (DEFAULT_CONFIG.to_string(), String::new()));
+        assert_eq!(resolve_config_in(&e, Some("/given.toml"), env(&[]), only_old), ("/given.toml".to_string(), String::new()));
+        let (path, note) = resolve_config_in(&e, None, env(&[("EARLIER_CONFIG", "/y.toml")]), only_old);
+        assert_eq!(path, "/y.toml");
+        assert!(note.contains("deprecated"));
+    }
+
+    #[test]
+    fn test_header_alias_and_island_urls() {
+        let e = example();
+        let h = |n: &str| if n == "X-Earlier-Source" { Some("cli") } else { None };
+        assert_eq!(e.header(h, "X-Scapegoat-Source"), "cli");
+        let both = |n: &str| match n {
+            "X-Scapegoat-Source" => Some("ui"),
+            _ => Some("cli"),
+        };
+        assert_eq!(e.header(both, "X-Scapegoat-Source"), "ui");
+        assert_eq!(e.header(h, "X-Scapegoat-User"), "");
+        let cfg = config::from_dict(&json!({"node_name": "n1"}), "").unwrap();
+        assert_eq!(e.island_urls("http://h", &cfg, "s"), vec!["http://h/earlier/n1/s/status"]);
+    }
+}
