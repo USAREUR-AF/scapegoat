@@ -1,0 +1,151 @@
+#!/usr/bin/env python3
+"""Prepare site/ for publishing and check it against the tree. Standard library only.
+
+    python3 -I site/build.py
+
+1. Copies the files the page shows from the tree into site/assets/from-tree/
+   (git-ignored). The page never carries its own copy of a figure or capture.
+2. Measures every number marked data-measure="<key>" on every page and fails
+   when the page states anything else, when a page names a key this file does
+   not measure, or when the home page leaves a measured key out.
+3. Fails when the page or a file under assets/ still holds a placeholder
+   (the word in capitals the templates use, or a double-braced NAME).
+4. Runs site/fitcheck.py: in headless Chrome at 1440 and 390 px, no command box
+   is cut off, no output box at 1440 px, and the page never scrolls sideways.
+"""
+import ast
+import glob
+import json
+import os
+import re
+import shutil
+import subprocess
+import sys
+
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+SITE = os.path.join(ROOT, "site")
+OUT = os.path.join(SITE, "assets", "from-tree")
+
+# Every page of the site. Each number on any of them is checked.
+PAGES = ["index.html"]
+
+# Files copied from the tree into assets/from-tree/, by path relative to the repo root.
+FROM_TREE = [
+    # "docs/figures/overview-light.svg", "docs/figures/overview-dark.svg",
+]
+
+
+def tree(rel):
+    return ast.parse(open(os.path.join(ROOT, rel)).read())
+
+
+def assigned(rel, name):
+    for n in tree(rel).body:
+        if isinstance(n, ast.Assign) and any(getattr(t, "id", None) == name for t in n.targets):
+            return ast.literal_eval(n.value)
+    raise SystemExit(f"site/build.py: {name} not found in {rel}")
+
+
+def packages():
+    """Top-level imports in scapegoat/ that are neither the standard library nor
+    scapegoat. goat_transformers is not a package to install: it is loaded from a
+    configured checkout, and without it the outputs are off."""
+    found = set()
+    for p in glob.glob(os.path.join(ROOT, "scapegoat", "**", "*.py"), recursive=True):
+        for n in ast.walk(ast.parse(open(p).read())):
+            if isinstance(n, ast.Import):
+                found |= {a.name.split(".")[0] for a in n.names}
+            elif isinstance(n, ast.ImportFrom) and n.level == 0 and n.module:
+                found.add(n.module.split(".")[0])
+    return sorted(m for m in found if m not in sys.stdlib_module_names
+                  and m not in ("scapegoat", "goat_transformers"))
+
+
+def tests():
+    total = 0
+    for p in glob.glob(os.path.join(ROOT, "tests", "**", "*.py"), recursive=True):
+        total += sum(1 for n in ast.walk(ast.parse(open(p).read()))
+                     if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef)) and n.name.startswith("test"))
+    return total
+
+
+# key -> function returning the exact text the page must show. One line per number,
+# and site/README.md says how each is measured.
+MEASURES = {
+    "states": lambda: str(len(assigned("scapegoat/core/session.py", "STATES"))),
+    "formats": lambda: str(len(assigned("scapegoat/core/outputs.py", "FORMATS"))),
+    "packages": lambda: str(len(packages())),
+    "tests": lambda: str(tests()),
+}
+
+
+def check_quotes(page):
+    """What the page quotes from the tree is still in the tree: the faint text behind
+    the first screen, and the recorded session the replay plays."""
+    bad = 0
+    bg = re.search(r'<pre class="bgcode"[^>]*>(.*?)</pre>', page, re.S).group(1)
+    src = open(os.path.join(ROOT, "scapegoat", "core", "session.py")).read()
+    if bg.replace("&gt;", ">").replace("&lt;", "<") not in src:
+        print("site/index.html: the text behind the first screen is no longer in scapegoat/core/session.py")
+        bad += 1
+    rec = json.load(open(os.path.join(SITE, "session.json")))
+    moves = [l["text"].split(":")[0] for l in rec["lines"] if l.get("kind") == "state"]
+    want = ["disabled -> handshaking", "handshaking -> establishing", "establishing -> established",
+            "established -> degraded", "degraded -> lost", "lost -> establishing", "establishing -> established"]
+    if moves != want:
+        print(f"site/session.json: state moves {moves}, the page describes {want}; re-record with site/record.py")
+        bad += 1
+    states = set(assigned("scapegoat/core/session.py", "STATES"))
+    for s in re.findall(r'data-s="([a-z]+)"', page):
+        if s not in states:
+            print(f"site/index.html: ladder state {s!r} is not in STATES")
+            bad += 1
+    log = re.search(r'id="event-log">(.*?)</pre>', page, re.S).group(1)
+    stated = [re.sub(r"<[^>]+>", "", x).replace("&gt;", ">") for x in re.findall(r'<span class="ln">(.*?)</span>', log)]
+    recorded = [re.sub(r"\(\d+\.\d s\)|\d+\.\d s", "", l["text"]) for l in rec["lines"] if l.get("kind") == "state"]
+    if [re.sub(r"\(\d+\.\d s\)|\d+\.\d s", "", x) for x in stated] != recorded:
+        print("site/index.html: the event log in 'Every state change says why' differs from site/session.json")
+        bad += 1
+    return bad
+
+
+def main():
+    os.makedirs(OUT, exist_ok=True)
+    for rel in FROM_TREE:
+        shutil.copyfile(os.path.join(ROOT, rel), os.path.join(OUT, os.path.basename(rel)))
+    measured = {k: f() for k, f in MEASURES.items()}
+    bad = 0
+    served = PAGES + [os.path.relpath(p, SITE) for p in glob.glob(os.path.join(SITE, "assets", "*.*"))]
+    for name in served:
+        with open(os.path.join(SITE, name), errors="replace") as f:
+            text = f.read()
+        lines = sorted({text.count("\n", 0, m.start()) + 1 for m in re.finditer(r"REPLACE|\{\{[A-Z_]+\}\}", text)})
+        if lines:
+            more = f" (and {len(lines) - 5} more)" if len(lines) > 5 else ""
+            print(f"site/{name}: placeholders on line{'s' if len(lines) > 1 else ''} {', '.join(map(str, lines[:5]))}{more}")
+            bad += 1
+    with open(os.path.join(SITE, "index.html")) as f:
+        bad += check_quotes(f.read())
+    for name in PAGES:
+        with open(os.path.join(SITE, name)) as f:
+            page = f.read()
+        stated = dict(re.findall(r'data-measure="([a-z0-9-]+)">([^<]*)<', page))
+        for key, value in measured.items():
+            if key not in stated:
+                if name == "index.html":
+                    print(f"site/{name}: no data-measure=\"{key}\"")
+                    bad += 1
+            elif stated[key] != value:
+                print(f"site/{name}: {key} says {stated[key]}, the tree gives {value}")
+                bad += 1
+        for key in stated.keys() - measured.keys():
+            print(f"site/{name}: data-measure=\"{key}\" is not measured by site/build.py")
+            bad += 1
+    if bad:
+        return 1
+    print("site: numbers match the tree:", ", ".join(f"{k}={v}" for k, v in measured.items()))
+    return subprocess.run([sys.executable, "-I", os.path.join(SITE, "fitcheck.py"), SITE] + PAGES).returncode
+
+
+if __name__ == "__main__":
+    sys.exit(main())
