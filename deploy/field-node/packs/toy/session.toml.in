@@ -1,0 +1,2 @@
+[sessions.${SESSION_ID}.protocol_settings]
+keepalive_interval_s = 30

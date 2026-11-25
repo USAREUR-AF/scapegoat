@@ -1,0 +1,680 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>scapegoat</title>
+<style>
+  :root {
+    --bg: #f4f6f8; --card: #ffffff; --ink: #1d2733; --muted: #5b6876; --line: #d3dae2;
+    --blue: #1f5f99; --blue-soft: #dbe8f5; --green: #1e6b45; --green-soft: #dcefe4;
+    --grey: #4a525b; --grey-soft: #e6e9ec; --dark: #2b3138;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #12171c; --card: #1b2229; --ink: #e3e8ee; --muted: #9aa6b2; --line: #2f3943;
+      --blue: #7fb2e5; --blue-soft: #1c3247; --green: #7fcfa2; --green-soft: #183a2a;
+      --grey: #b5bec7; --grey-soft: #2a3239; --dark: #d0d6dc;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink);
+         font: 16px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  header { display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+           padding: 10px 16px; background: var(--card); border-bottom: 1px solid var(--line); }
+  header h1 { font-size: 26px; margin: 0; line-height: 1.2; }
+  .ident { flex: 1 1 100%; border-left: 6px solid var(--blue); padding-left: 10px; }
+  #ident2 { font-size: 15px; }
+  .role-unset { font-size: 15px; color: var(--muted); font-weight: 400; }
+  #conn { font-size: 14px; color: var(--muted); }
+  nav { display: flex; gap: 4px; margin-left: auto; }
+  nav button { border: 1px solid var(--line); background: var(--bg); color: var(--ink);
+               padding: 6px 14px; border-radius: 6px; font-size: 15px; cursor: pointer; }
+  nav button[aria-selected="true"] { background: var(--blue); color: #fff; border-color: var(--blue); }
+  main { max-width: 1100px; margin: 0 auto; padding: 16px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px;
+          padding: 14px 16px; margin-bottom: 16px; }
+  .card h2 { margin: 0 0 8px; font-size: 19px; }
+  .row { display: flex; flex-wrap: wrap; gap: 16px; align-items: center; }
+  .badge { display: inline-flex; align-items: center; gap: 10px; padding: 8px 16px;
+           border-radius: 8px; font-size: 22px; font-weight: 700; letter-spacing: .02em;
+           border: 3px solid transparent; text-transform: uppercase; }
+  .badge .sym { font-size: 26px; line-height: 1; }
+  .st-established { background: var(--green-soft); color: var(--green); border-color: var(--green); }
+  .st-establishing { background: var(--blue-soft); color: var(--blue); border: 3px dashed var(--blue); }
+  .st-handshaking { background: var(--card); color: var(--blue); border: 3px dotted var(--blue); }
+  .st-degraded { color: var(--dark); border-color: var(--grey);
+    background: repeating-linear-gradient(45deg, var(--grey-soft) 0 8px, var(--card) 8px 16px); }
+  .st-lost { color: var(--card); background-color: var(--dark); border-color: var(--dark);
+    background-image: repeating-linear-gradient(-45deg, rgba(255,255,255,.14) 0 6px, transparent 6px 12px); }
+  .st-disabled { background: var(--grey-soft); color: var(--muted); border: 3px solid var(--line); }
+  .why { color: var(--muted); font-size: 14px; }
+  .error { border-left: 6px solid var(--dark); background: var(--grey-soft); padding: 8px 12px;
+           margin: 10px 0; font-weight: 600; }
+  dl.kv { display: grid; grid-template-columns: max-content 1fr; gap: 4px 14px; margin: 10px 0; }
+  dl.kv dt { color: var(--muted); }
+  dl.kv dd { margin: 0; font-variant-numeric: tabular-nums; word-break: break-all; }
+  table { border-collapse: collapse; width: 100%; font-size: 14px; }
+  th, td { text-align: left; padding: 4px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; }
+  td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .scroll { overflow-x: auto; }
+  h3 { font-size: 16px; margin: 16px 0 6px; }
+  button.act { border: 1px solid var(--blue); background: var(--blue-soft); color: var(--blue);
+               padding: 8px 12px; border-radius: 6px; font-size: 15px; cursor: pointer; margin: 0 6px 6px 0; }
+  button.act:disabled { opacity: .45; cursor: not-allowed; }
+  button.life { border-color: var(--grey); background: var(--grey-soft); color: var(--ink); }
+  .danger-zone { border: 2px dashed var(--grey); border-radius: 8px; padding: 10px 12px; margin-top: 12px; }
+  .danger-zone h4 { margin: 0 0 6px; font-size: 15px; }
+  button.danger { border: 2px solid var(--dark); background: var(--card); color: var(--ink); font-weight: 700; }
+  .ev { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; }
+  .ev .lv-warn, .ev .lv-error { font-weight: 700; }
+  .ev .lv-error::before { content: "!! "; } .ev .lv-warn::before { content: "! "; }
+  pre { background: var(--grey-soft); padding: 10px; border-radius: 6px; overflow-x: auto;
+        font-size: 13px; max-height: 360px; }
+  label { font-size: 14px; color: var(--muted); display: inline-flex; flex-direction: column; gap: 2px; margin: 0 8px 8px 0; }
+  input { font-size: 15px; padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px;
+          background: var(--card); color: var(--ink); width: 11em; }
+  .hidden { display: none; }
+  .addrcheck { font-size: 14px; padding: 3px 10px; border-radius: 6px; border: 2px solid var(--line); }
+  .addrcheck.ok { border-color: var(--green); color: var(--green); background: var(--green-soft); }
+  .addrcheck.bad { border: 2px dashed var(--dark); color: var(--ink); background: var(--grey-soft); font-weight: 700; }
+  .hints { border: 3px solid var(--blue); }
+  .hints li { margin-bottom: 8px; }
+  .hints code, code { font-family: ui-monospace, Menlo, monospace; font-size: 13px; background: var(--grey-soft);
+                      padding: 1px 4px; border-radius: 4px; word-break: break-all; }
+  .locked { font-weight: 700; }
+  .kind { font-size: 24px; font-weight: 800; padding: 12px 14px; border-radius: 8px; margin: -2px 0 12px;
+          letter-spacing: .02em; }
+  .kind-sim { color: var(--ink); border: 3px dashed var(--grey);
+    background: repeating-linear-gradient(45deg, var(--grey-soft) 0 10px, var(--card) 10px 20px); }
+  .kind-real { color: #fff; background: #12395f; border: 3px solid #12395f; }
+  .kind-none { color: var(--muted); border: 3px dotted var(--line); font-size: 18px; }
+  .latch { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 0 10px 8px 0;
+           padding: 6px; border: 1px dashed var(--line); border-radius: 8px; }
+  .latch.armed { border: 3px solid var(--dark); }
+  button.locked { background: var(--grey-soft); color: var(--muted); border: 2px solid var(--line); }
+  .pad { display: inline-block; width: 10px; height: 8px; border: 2px solid var(--muted); border-radius: 2px;
+         margin-right: 6px; position: relative; top: 1px; }
+  .pad::before { content: ""; position: absolute; left: 1px; top: -7px; width: 4px; height: 5px;
+                 border: 2px solid var(--muted); border-bottom: 0; border-radius: 4px 4px 0 0; }
+  .armbox { flex-direction: row; align-items: center; gap: 4px; font-weight: 600; color: var(--ink); margin: 0; }
+  .armbox input { width: auto; }
+  .count { font-variant-numeric: tabular-nums; }
+  .effect { flex-basis: 100%; }
+  .ask { border: 3px solid var(--blue); background: var(--blue-soft); color: var(--ink); padding: 10px 12px;
+         margin: 10px 0; border-radius: 8px; font-size: 18px; }
+  .error ul { margin: 4px 0 0; padding-left: 20px; font-weight: 400; }
+  button.suggested { outline: 4px double var(--blue); outline-offset: 2px; }
+  select { font-size: 15px; padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px;
+           background: var(--card); color: var(--ink); }
+  #tr-body tr.msg { cursor: pointer; }
+  #tr-body tr.msg:hover { background: var(--grey-soft); }
+  #tr-body tr.bad td:first-child::before { content: "!! "; font-weight: 700; }
+  #tr-body tr.bad { font-weight: 600; background: repeating-linear-gradient(45deg, transparent 0 8px, var(--grey-soft) 8px 16px); }
+  #tr-body tr.detail td { background: var(--bg); }
+  .dir { font-family: ui-monospace, Menlo, monospace; font-weight: 700; white-space: nowrap; }
+  @media (max-width: 600px) { .badge { font-size: 18px; } dl.kv { grid-template-columns: 1fr; } dl.kv dd { margin-bottom: 6px; } }
+</style>
+</head>
+<body>
+<header>
+  <div class="ident">
+    <h1 id="ident1">scapegoat</h1>
+    <div id="ident2" class="why"></div>
+  </div>
+  <span id="conn">connecting...</span>
+  <span id="addrcheck" class="addrcheck hidden"></span>
+  <span id="nodehead" class="why"></span>
+  <span id="topohead" class="why"></span>
+  <nav role="tablist">
+    <button id="tab-sessions" role="tab" aria-selected="true">Sessions</button>
+    <button id="tab-traffic" role="tab" aria-selected="false">Traffic</button>
+    <button id="tab-net" role="tab" aria-selected="false">Network</button>
+  </nav>
+</header>
+<main>
+  <section id="view-sessions"><p id="sessions-empty">Loading sessions...</p><div id="sessions"></div></section>
+  <section id="view-traffic" class="hidden">
+    <div class="card">
+      <h2>Traffic <span class="why" id="tr-mode">live: every message scapegoat sends, receives and forwards</span></h2>
+      <div class="row">
+        <label>Session<select id="tr-session"></select></label>
+        <label>Message name contains<input id="tr-filter" placeholder="KeepAlive"></label>
+        <label>Direction<select id="tr-dir">
+          <option value="">all</option><option value="rx">&lt;- received</option>
+          <option value="tx">-&gt; sent</option><option value="fwd">=&gt; forwarded</option>
+          <option value="wire">~~ wire</option><option value="dgram">&lt;&lt; whole datagram</option></select></label>
+      </div>
+      <div class="row">
+        <button class="act" id="tr-pause">Pause</button>
+        <button class="act" id="tr-wire">Capture from the wire (10 s)</button>
+        <button class="act life hidden" id="tr-live">Back to live</button>
+        <span class="why" id="tr-status"></span>
+      </div>
+      <p class="why">Newest on top. Tap a row for every decoded field and the raw bytes.
+        Arrows: -&gt; sent by scapegoat, &lt;- received, =&gt; forwarded copy, ~~ seen on the wire.
+        "!!" marks a message that failed its checks.</p>
+      <div class="scroll"><table id="tr-table"><thead><tr><th>Time (UTC)</th><th>Dir</th><th>Peer</th>
+        <th>Message</th><th>Key fields</th></tr></thead><tbody id="tr-body"></tbody></table></div>
+    </div>
+  </section>
+  <section id="view-net" class="hidden">
+    <div class="card">
+      <h2>Network tools</h2>
+      <div class="row">
+        <button class="act" id="net-refresh">Refresh network view</button>
+        <span class="why" id="net-time"></span>
+      </div>
+      <h3>Check</h3>
+      <label>Ping address<input id="ping-ip" placeholder="192.0.2.81"></label>
+      <button class="act" id="btn-ping">Ping</button>
+      <br>
+      <label>UDP port<input id="cap-port" value="47000"></label>
+      <label>Seconds<input id="cap-sec" value="10"></label>
+      <label>Interface (optional)<input id="cap-if" placeholder="eth0"></label>
+      <button class="act" id="btn-capture">Capture packets</button>
+      <div class="danger-zone">
+        <h4>Change the network (affects this node)</h4>
+        <p class="why" id="netctl-why"></p>
+        <label>Interface<input id="nc-iface" placeholder="eth0"></label>
+        <label>Address/prefix<input id="nc-cidr" placeholder="192.0.2.10/24"></label>
+        <label>From network<input id="nc-from" placeholder="192.0.2.0/24"></label>
+        <label>Port<input id="nc-port" value="47000"></label>
+        <div id="netctl-buttons"></div>
+      </div>
+      <h3>Result</h3>
+      <pre id="net-result">(nothing run yet)</pre>
+    </div>
+    <div id="node-panel"></div>
+    <div id="net-snapshot"><p>Open this tab to load the network view.</p></div>
+  </section>
+</main>
+<script>
+"use strict";
+const STATES = {
+  established:  {sym: "●", text: "Established", why: "Link up: the sensor is answering keepalives."},
+  establishing: {sym: "◐", text: "Establishing", why: "The sensor answered; waiting for a few more keepalives."},
+  handshaking:  {sym: "○", text: "Handshaking", why: "Sending keepalives. Nothing received from the sensor yet."},
+  degraded:     {sym: "◇", text: "Degraded", why: "One expected keepalive from the sensor did not arrive."},
+  lost:         {sym: "✕", text: "Lost", why: "Two keepalives in a row missed. Still sending, so the sensor can reconnect."},
+  disabled:     {sym: "—", text: "Disabled", why: "This session is turned off."},
+};
+const NET_CONTROL = [
+  ["addr_add", "Add address", ["iface", "cidr"]],
+  ["addr_del", "Remove address", ["iface", "cidr"]],
+  ["link_up", "Interface up", ["iface"]],
+  ["link_down", "Interface down", ["iface"]],
+  ["neigh_flush", "Flush neighbors (ARP)", ["iface"]],
+  ["fw_allow", "Allow UDP in firewall", ["iface", "from_cidr", "port"]],
+];
+let health = {};
+let firstPeerIp = "";
+
+// The protocol's word for the device it talks to ("device" unless the protocol names one).
+function noun(s) { return (s && s.device_noun) || "device"; }
+function cap(t) { return t ? t.charAt(0).toUpperCase() + t.slice(1) : t; }
+function esc(v) {
+  return String(v == null ? "" : v).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+function age(v) { return v == null ? "never" : (v >= 10 ? Math.round(v) : v.toFixed(1)) + " s ago"; }
+
+async function api(method, path, body) {
+  const opt = {method, headers: {"Content-Type": "application/json", "X-Scapegoat-Source": "ui"}};
+  if (body !== undefined) opt.body = JSON.stringify(body);
+  const r = await fetch(path, opt);
+  let data = null;
+  try { data = await r.json(); } catch (e) { data = {error: "bad reply from service"}; }
+  if (!r.ok) throw new Error((data && data.error) || ("HTTP " + r.status));
+  return data;
+}
+
+/* ---------------- sessions ---------------- */
+function renderSession(s) {
+  const st = STATES[s.state] || {sym: "?", text: s.state, why: ""};
+  const names = Array.from(new Set(Object.keys(s.tx_by_name).concat(Object.keys(s.rx_by_name)))).sort();
+  const safe = s.actions.filter(a => !a.dangerous), danger = s.actions.filter(a => a.dangerous);
+  const asked = s.peer_request && s.peer_request.suggested_action;
+  const btn = a => {
+    if (!a.dangerous) return `<button class="act ${a.name === asked ? "suggested" : ""}" data-sid="${esc(s.id)}" data-act="${esc(a.name)}"
+      title="${esc(a.description)}" ${a.allowed && s.enabled ? "" : "disabled"}>${esc(a.label)}</button>`;
+    // Commands the device: locked until armed (10 s, one shot), then a typed device ID.
+    const k = s.id + ":" + a.name, arm = armed[k], live = arm && arm.until > Date.now();
+    const left = live ? Math.ceil((arm.until - Date.now()) / 1000) : 0;
+    const usable = a.allowed && s.enabled;
+    return `<span class="latch ${live ? "armed" : ""}">
+      <button class="act danger ${live ? "" : "locked"} ${a.name === asked ? "suggested" : ""}" data-sid="${esc(s.id)}" data-fire="${esc(a.name)}"
+        title="${esc(a.description)}" ${live ? "" : "disabled"} aria-disabled="${live ? "false" : "true"}">
+        ${live ? "" : '<span class="pad" aria-hidden="true"></span>'}${a.name === asked ? "\u261B " : ""}${esc(a.label)}${live ? ` <span class="count" data-until="${arm.until}">${left}s</span>` : " (locked)"}</button>
+      <label class="armbox"><input type="checkbox" data-sid="${esc(s.id)}" data-arm="${esc(a.name)}" ${live ? "checked" : ""} ${usable ? "" : "disabled"}> Arm</label>
+      <span class="why effect">${esc(a.effect || "")}</span></span>`;
+  };
+  const events = (s.events || []).slice().reverse().map(e =>
+    `<tr class="ev"><td>${esc(e.time.slice(11, 19))}</td><td>${esc(e.source)}</td><td>${esc(e.kind)}</td>
+     <td class="lv-${esc(e.level)}">${esc(e.message)}</td></tr>`).join("");
+  const kind = s.peer_kind === "SIMULATOR"
+    ? `<div class="kind kind-sim" role="status">\u25A8 SIMULATOR \u2014 not a real sensor</div>`
+    : s.peer_is_real
+    ? `<div class="kind kind-real" role="status">\u25A0 ${esc(s.peer_kind)} ${esc(s.peer_seen || s.locked || "")}${s.peer_device_id != null ? " (" + esc(cap(noun(s))) + " ID " + esc(s.peer_device_id) + ")" : ""}</div>`
+    : `<div class="kind kind-none" role="status">No ${esc(noun(s))} has answered yet</div>`;
+  return `<div class="card">
+    ${kind}
+    <h2>${esc(s.id)} <span class="why">(${esc(s.protocol)})</span></h2>
+    <div class="row">
+      <span class="badge st-${esc(s.state)}" role="status"><span class="sym" aria-hidden="true">${st.sym}</span>${esc(st.text)}</span>
+      <span class="why">${esc(st.why)} For ${Math.round(s.state_age_s || 0)} s.</span>
+    </div>
+    ${s.error ? `<div class="error">Problem: ${esc(s.error)}</div>` : ""}
+    ${s.peer_request ? `<div class="ask"><span aria-hidden="true">\u261B</span> ${esc(cap(noun(s)))} is asking: <b>${esc(s.peer_request.label)}</b>
+      <span class="why">(${s.peer_request.count} times, last ${age(s.peer_request.last_seen_age_s)})${s.peer_request.disabled_reason ? " \u2014 " + esc(s.peer_request.disabled_reason) : s.peer_request.suggested_action ? " \u2014 use the highlighted button below" : ""}</span></div>` : ""}
+    ${(s.problems || []).length ? `<div class="error">Problems from the decoder:<ul>${s.problems.slice(0, 5).map(p =>
+      `<li>${esc(p.problem)} <span class="why">(${p.count} times, last ${age(p.last_seen_age_s)})</span></li>`).join("")}</ul>
+      ${s.problems.length > 5 ? `<span class="why">and ${s.problems.length - 5} more (scapegoat status ${esc(s.id)})</span>` : ""}</div>` : ""}
+    ${s.peer_status ? `<p><b>${esc(cap(noun(s)))}:</b> ${esc(Object.values(s.peer_status).filter(Boolean).join(", "))}
+      <span class="why">(from its last keepalive, ${age(s.peer_status.age_s)})</span></p>` : ""}
+    <h3>Sensor addresses</h3>
+    <p class="why">${s.locked ? (s.lock_forced ? "Locked by an operator." : "Locked onto the address that answered first.") + " Reset to probe all candidates again."
+                    : "Sending keepalives to every address below until one answers."}</p>
+    <div class="scroll"><table><tr><th>Address</th><th>Status</th><th class="num">Our counter</th><th class="num">Its counter</th><th></th></tr>
+      ${(s.candidates || []).map(c => `<tr class="${c.locked ? "locked" : ""}"><td>${esc(c.address)}</td>
+        <td>${c.locked ? "\u25A0 LOCKED" : c.probing ? "\u25CB probing" : "\u2014 not used"}</td>
+        <td class="num">${c.tx_counter}</td><td class="num">${c.rx_counter}</td>
+        <td>${c.locked ? "" : `<button class="act life" data-sid="${esc(s.id)}" data-lock="${esc(c.address)}">Use only this</button>`}</td></tr>`).join("")}
+    </table></div>
+    <dl class="kv">
+      <dt>Sensor answering from</dt><dd>${esc(s.peer_seen || "nothing received yet")}</dd>
+      <dt>Our socket</dt><dd>${esc(s.local)}</dd>
+      <dt>Last received</dt><dd>${age(s.last_rx_age_s)}</dd>
+      <dt>Last sent</dt><dd>${age(s.last_tx_age_s)}</dd>
+      <dt>Last keepalive from sensor</dt><dd>${age(s.last_keepalive_rx_age_s)} (every ${esc(s.keepalive_interval_s)} s expected)</dd>
+      <dt>Datagrams sent / received</dt><dd>${s.tx_datagrams} / ${s.rx_datagrams} (${s.rx_messages != null ? s.rx_messages : s.rx_datagrams} messages; bad: ${s.bad_datagrams}, ignored from other addresses: ${s.foreign_datagrams})</dd>
+      ${(s.notes || []).length ? `<dt>Dictionary notes</dt><dd>${s.notes.map(n => esc(n.note.split(" (message is")[0]) + " [" + esc((n.messages || []).join(", ")) + "] \u00D7" + n.count).join("<br>")} <span class="why">(self-consistent messages; the device speaks a newer dictionary revision)</span></dd>` : ""}
+      <dt>Our counter / sensor counter</dt><dd>${s.tx_counter} / ${s.rx_counter}</dd>
+      <dt>Forwarded copies</dt><dd>${s.forwarded} to ${esc(s.forward.join(", ") || "none")}${s.forward_errors ? " (" + s.forward_errors + " failed)" : ""}</dd>
+    </dl>
+    <h3>Messages</h3>
+    <div class="scroll"><table><tr><th>Message</th><th class="num">Sent</th><th class="num">Received</th></tr>
+      ${names.map(n => `<tr><td>${esc(n)}</td><td class="num">${s.tx_by_name[n] || 0}</td><td class="num">${s.rx_by_name[n] || 0}</td></tr>`).join("") || "<tr><td colspan=3>none yet</td></tr>"}
+    </table></div>
+    ${(() => { const d = (s.protocol_status || {}).display || {}; const ow = s.owed_replies || {};
+      const lines = (d.lines || []).concat(ow.answered || ow.missed ? ["Owed replies: " + (ow.answered || 0) + " answered, " + (ow.missed || 0) + " missed."] : []);
+      return (lines.length ? `<p class="why">${lines.map(esc).join("<br>")}</p>` : "")
+        + (d.tables || []).map(t => `<h3>${esc(t.title || "")}</h3><div class="scroll"><table><tr>${(t.columns || []).map(c => `<th>${esc(c)}</th>`).join("")}</tr>
+          ${(t.rows || []).map(r => `<tr>${r.map(c => `<td>${esc(c == null ? "-" : (/^\d{4}-\d\d-\d\dT/.test(String(c)) ? String(c).replace("T", " ") : String(c)))}</td>`).join("")}</tr>`).join("")}</table></div>`).join("");
+    })()}
+    <h3>Manual triggers</h3>
+    ${s.enabled ? "" : '<p class="why">Enable the session to send triggers.</p>'}
+    <div>${safe.map(btn).join("")}</div>
+    ${danger.length ? `<div class="danger-zone"><h4>${esc(cap(noun(s)))} controls (safety latch)</h4>
+      <p class="why">${danger[0].allowed ? "These command the real " + esc(noun(s)) + ". Each is locked: tick Arm to unlock that one control for 10 seconds, press it, and type the " + esc(noun(s)) + " ID to confirm. It locks again after one use or when the time runs out."
+        : "Turned off: set allow_radiate_control = true for this session in the config and restart scapegoat."}</p>
+      ${danger.map(btn).join("")}</div>` : ""}
+    <h3>Session</h3>
+    <button class="act life" data-sid="${esc(s.id)}" data-life="${s.enabled ? "disable" : "enable"}">${s.enabled ? "Disable" : "Enable"}</button>
+    <button class="act life" data-sid="${esc(s.id)}" data-life="reset">Reset counters and handshake</button>
+    <h3>Last 50 events (newest first)</h3>
+    <div class="scroll"><table><tr><th>Time (UTC)</th><th>By</th><th>Kind</th><th>Event</th></tr>${events || "<tr><td colspan=4>none</td></tr>"}</table></div>
+  </div>`;
+}
+
+function renderIdentity() {
+  const id = health.identity;
+  if (!id) return;
+  const h1 = document.getElementById("ident1");
+  if (id.node_role) h1.textContent = id.hostname + " \u00B7 " + id.node_role;
+  else h1.innerHTML = esc(id.hostname) + " \u00B7 " + (id.billie_node ? esc(id.billie_node) + " " : "") +
+    `<span class="role-unset">${esc(id.role_note)}</span>`;
+  const parts = [];
+  if (id.billie_node) parts.push("Billie node " + id.billie_node);
+  (id.sensor_sees || []).forEach(r => parts.push("sensor sees us at " + r.address + ((id.sensor_sees.length > 1) ? " (" + r.session + ")" : "")));
+  if (id.mesh_address) parts.push("mesh " + id.mesh_address);
+  if (id.slot_short) parts.push("slot " + id.slot_short);
+  document.getElementById("ident2").textContent = parts.join("  \u00B7  ");
+  identTitle = id.title;
+}
+let identTitle = "";
+let nodeInfo = null;
+function renderNode() {
+  const n = nodeInfo;
+  if (!n) return;
+  const b = n.billie || {};
+  const sensor = (n.addresses || []).filter(a => a.role === "sensor LAN").map(a => a.cidr + " on " + a.iface);
+  document.getElementById("nodehead").textContent = sensor.length ? "sensor LAN " + sensor.join(", ") : "";
+  const rows = (n.addresses || []).map(a => `<tr><td><b>${esc(a.role)}</b></td><td>${esc(a.iface)}</td><td>${esc(a.cidr)}</td>
+    <td>${esc(a.link)}${a.cable === false ? ", NO CABLE" : a.cable ? ", cable" : ""}</td><td>${a.route_note ? (a.default_route ? "\u2192 " : "") + esc(a.route_note) : ""}</td></tr>`).join("");
+  document.getElementById("node-panel").innerHTML = `<div class="card"><h2>This node: ${esc(n.hostname)}</h2>
+    ${b.node_handle || b.billie_fabric_prefix ? `<dl class="kv">${b.node_handle ? `<dt>Billie node</dt><dd>${esc(b.node_handle)}</dd>` : ""}
+      ${b.billie_fabric_prefix ? `<dt>Goatnet slot</dt><dd>${esc(b.billie_fabric_prefix)}</dd>` : ""}
+      ${b.billie_fabric_endpoint ? `<dt>Fabric endpoint</dt><dd>${esc(b.billie_fabric_endpoint)}</dd>` : ""}</dl>` : ""}
+    ${n.error ? `<p class="error">Addresses not available: ${esc(n.error)}</p>` : ""}
+    <div class="scroll"><table><tr><th>Role</th><th>Interface</th><th>Address</th><th>Link</th><th></th></tr>${rows || "<tr><td colspan=5>no addresses</td></tr>"}</table></div>
+    ${n.loopback_hidden ? `<p class="why">Loopback hidden (${n.loopback_hidden}).</p>` : ""}</div>`;
+}
+async function pollNode() {
+  try { nodeInfo = await api("GET", "/api/node"); renderNode(); } catch (e) {}
+}
+
+function renderAddrCheck() {
+  const el = health.expected_local, box = document.getElementById("addrcheck");
+  if (!el) { box.classList.add("hidden"); return; }
+  box.classList.remove("hidden", "ok", "bad");
+  box.classList.add(el.present ? "ok" : "bad");
+  box.textContent = (el.present ? "\u2713 Node address " : "\u2717 Node address ") + el.text;
+}
+
+async function pollSessions() {
+  try {
+    health = await api("GET", "/api/health");
+    renderIdentity();
+    renderAddrCheck();
+    pollNode();
+    document.getElementById("topohead").textContent = health.topology ? "topology: " + health.topology : "";
+    const list = await api("GET", "/api/sessions");
+    const full = await Promise.all(list.map(s => api("GET", "/api/sessions/" + encodeURIComponent(s.id))));
+    lastSessions = full;
+    if (full.length && !firstPeerIp) firstPeerIp = (full[0].locked || full[0].peer).split(":")[0];
+    document.getElementById("sessions-empty").textContent = full.length ? "" : "No sessions in the config.";
+    document.getElementById("sessions").innerHTML = full.map(renderSession).join("");
+    fillTrafficSessions(full.map(s => s.id));
+    const kinds = Array.from(new Set(full.map(s => s.peer_kind).filter(k => k && !k.startsWith("no "))));
+    const kindText = kinds.length ? kinds.map(k => k).join(" + ") : "no device yet";
+    document.title = (identTitle ? identTitle + " \u2014 " : "") + "scapegoat (" + kindText + ")";
+    document.getElementById("conn").textContent = "updated " + new Date().toLocaleTimeString() +
+      (health.version ? " · v" + health.version + " · " + health.node_name : "");
+  } catch (e) {
+    document.getElementById("conn").textContent = "cannot reach the service: " + e.message;
+  }
+}
+
+document.getElementById("sessions").addEventListener("click", async ev => {
+  const b = ev.target.closest("button");
+  if (!b || b.disabled) return;
+  const sid = b.dataset.sid;
+  try {
+    if (b.dataset.life) {
+      if (b.dataset.life !== "enable" && !confirm(b.textContent + " session " + sid + "?" +
+          (b.dataset.life === "reset" ? "\nThis also unlocks the sensor address and probes all candidates." : ""))) return;
+      await api("POST", `/api/sessions/${encodeURIComponent(sid)}/${b.dataset.life}`, {});
+    } else if (b.dataset.lock) {
+      if (!confirm("Talk only to " + b.dataset.lock + " and stop sending to the other addresses?")) return;
+      await api("POST", `/api/sessions/${encodeURIComponent(sid)}/lock`, {peer: b.dataset.lock});
+    } else if (b.dataset.act) {
+      await api("POST", `/api/sessions/${encodeURIComponent(sid)}/actions/${encodeURIComponent(b.dataset.act)}`, {});
+    } else if (b.dataset.fire) {
+      await fireArmed(sid, b.dataset.fire);
+    }
+  } catch (e) { alert(e.message); }
+  pollSessions();
+});
+
+/* ---------------- safety latch ---------------- */
+let lastSessions = [];
+const armed = {};   // "sid:action" -> {token, until, args, effect, device_id, noun}
+async function armControl(sid, name, box) {
+  const s = lastSessions.find(x => x.id === sid) || {};
+  const spec = (s.actions || []).find(a => a.name === name) || {};
+  const args = {};
+  for (const p of spec.params || []) {
+    const v = prompt(`${spec.label}: ${p.help}` + (p.default != null ? ` (default ${p.default})` : ""),
+                     p.default != null ? String(p.default) : "");
+    if (v === null) { box.checked = false; return; }
+    if (v !== "") args[p.name] = v;
+  }
+  try {
+    const r = await api("POST", `/api/sessions/${encodeURIComponent(sid)}/arm/${encodeURIComponent(name)}`, {args});
+    armed[sid + ":" + name] = {token: r.token, until: Date.now() + r.expires_in_s * 1000, args,
+                               effect: r.effect, device_id: r.device_id, noun: r.device_noun || "device"};
+  } catch (e) { box.checked = false; alert(e.message); }
+  pollSessions();
+}
+async function disarmControl(sid, name) {
+  delete armed[sid + ":" + name];
+  try { await api("POST", `/api/sessions/${encodeURIComponent(sid)}/disarm/${encodeURIComponent(name)}`, {}); } catch (e) {}
+  pollSessions();
+}
+async function fireArmed(sid, name) {
+  const k = sid + ":" + name, a = armed[k];
+  if (!a || a.until <= Date.now()) { delete armed[k]; alert("Not armed (or the 10 seconds ran out). Tick Arm again."); return; }
+  const typed = prompt(`${a.effect.toUpperCase()}.\n\nType the ${a.noun} ID (${a.device_id}) to send it. Anything else cancels.`);
+  delete armed[k];
+  if (typed === null || typed.trim() !== String(a.device_id)) {
+    await disarmControl(sid, name);
+    if (typed !== null) alert("The " + a.noun + " ID did not match. Nothing was sent; the control is locked again.");
+    return;
+  }
+  const r = await api("POST", `/api/sessions/${encodeURIComponent(sid)}/actions/${encodeURIComponent(name)}`,
+                      {args: a.args, token: a.token, confirm: typed.trim()});
+  alert("Sent: " + (r.effect || name) + ". Locked again.");
+}
+document.getElementById("sessions").addEventListener("change", ev => {
+  const box = ev.target.closest("input[data-arm]");
+  if (!box) return;
+  if (box.checked) armControl(box.dataset.sid, box.dataset.arm, box);
+  else disarmControl(box.dataset.sid, box.dataset.arm);
+});
+setInterval(() => {   // countdowns; re-lock at zero
+  document.querySelectorAll(".count[data-until]").forEach(el => {
+    const left = Math.ceil((Number(el.dataset.until) - Date.now()) / 1000);
+    if (left <= 0) pollSessions(); else el.textContent = left + "s";
+  });
+  for (const k of Object.keys(armed)) if (armed[k].until <= Date.now()) delete armed[k];
+}, 500);
+
+/* ---------------- network ---------------- */
+function cell(v) {
+  if (v == null) return "";
+  if (typeof v === "object") return esc(JSON.stringify(v));
+  return esc(v);
+}
+function renderValue(v) {
+  if (v && typeof v === "object" && !Array.isArray(v) && "error" in v && Object.keys(v).length === 1)
+    return `<p class="error">Not available: ${esc(v.error)}</p>`;
+  if (Array.isArray(v)) {
+    if (!v.length) return "<p class='why'>none</p>";
+    if (v.every(x => x && typeof x === "object" && !Array.isArray(x))) {
+      const keys = Array.from(new Set(v.flatMap(Object.keys)));
+      return `<div class="scroll"><table><tr>${keys.map(k => `<th>${esc(k)}</th>`).join("")}</tr>
+        ${v.map(r => `<tr>${keys.map(k => `<td>${cell(r[k])}</td>`).join("")}</tr>`).join("")}</table></div>`;
+    }
+    return `<pre>${esc(v.map(x => typeof x === "string" ? x : JSON.stringify(x)).join("\n"))}</pre>`;
+  }
+  if (v && typeof v === "object") {
+    return `<dl class="kv">${Object.entries(v).map(([k, x]) =>
+      `<dt>${esc(k)}</dt><dd>${typeof x === "object" && x !== null ? renderValue(x) : esc(x)}</dd>`).join("")}</dl>`;
+  }
+  return `<p>${esc(v)}</p>`;
+}
+async function loadNet() {
+  const box = document.getElementById("net-snapshot");
+  box.innerHTML = "<p>Loading network view (this runs a few commands on the node)...</p>";
+  try {
+    const snap = await api("GET", "/api/net");
+    const title = k => k.replace(/_/g, " ").replace(/^./, c => c.toUpperCase());
+    let html = "";
+    const hints = snap.hints || [];
+    html += `<div class="card hints"><h2>${hints.length ? "Fix these first" : "No problems found"}</h2>` +
+      (hints.length ? `<ol>${hints.map(h => `<li>${esc(h).replace(/(scapegoat net [^,;.]*?--confirm)/g, "<code>$1</code>")}</li>`).join("")}</ol>`
+                    : "<p class='why'>The network checks found nothing to fix.</p>") + "</div>";
+    const tp = snap.topology;
+    if (tp && tp.mode) html += `<div class="card"><h2>Topology: ${esc(tp.mode)}</h2><p>${tp.mode === "routed"
+      ? "The sensor is on another subnet and is reached through a router. This node needs no address in the sensor's subnet."
+      : "This node is on the sensor's own subnet."} <span class="why">(from ${esc(tp.source || "?")})</span></p>
+      ${tp.note ? `<p class="why">${esc(tp.note)}</p>` : ""}</div>`;
+    const el = snap.expected_local;
+    if (el && el.cidr) html += `<div class="card"><h2>Node address</h2><p class="${el.present ? "" : "locked"}">
+      ${el.present ? "\u2713 " + esc(el.cidr) + " present on " + esc((el.on || []).join(", ")) : "\u2717 " + esc(el.cidr) + " MISSING"}</p></div>`;
+    const sess = Array.isArray(snap.sessions) ? snap.sessions : [];
+    const peers = sess.flatMap(s => (s.peers || []).map(p => Object.assign({session: s.id || s.session || ""}, p)));
+    if (peers.length) html += `<div class="card"><h2>Sensor addresses</h2><div class="scroll"><table>
+      <tr><th>Session</th><th>Address</th><th>Same subnet as</th><th>Route</th><th>Neighbor (ARP)</th><th></th></tr>
+      ${peers.map(p => `<tr><td>${esc(p.session)}</td><td>${esc(p.ip)}:${esc(p.port)}</td>
+        <td>${p.same_subnet && p.same_subnet.length ? cell(p.same_subnet.map(m => m.iface || m)) : "none"}</td>
+        <td>${cell(p.route)}</td><td>${cell(p.neighbor)}</td>
+        <td><button class="act" data-ping="${esc(p.ip)}">Ping</button></td></tr>`).join("")}</table></div></div>`;
+    html += Object.entries(snap).filter(([k]) => !["hints", "expected_local", "expected_local_address"].includes(k)).map(([k, v]) =>
+      `<div class="card"><h2>${esc(title(k))}</h2>${renderValue(v)}</div>`).join("");
+    box.innerHTML = html;
+    document.getElementById("net-time").textContent = "loaded " + new Date().toLocaleTimeString();
+  } catch (e) {
+    box.innerHTML = `<div class="card"><p class="error">Network view not available: ${esc(e.message)}</p></div>`;
+  }
+}
+function showResult(r) {
+  document.getElementById("net-result").textContent = typeof r === "string" ? r : JSON.stringify(r, null, 2);
+}
+function renderNetControls() {
+  const allowed = !!health.allow_net_control;
+  document.getElementById("netctl-why").textContent = allowed
+    ? "Allowed by the config. Each change asks you to confirm and is written to the event log."
+    : "Turned off: set allow_net_control = true in the config and restart scapegoat to use these.";
+  document.getElementById("netctl-buttons").innerHTML = NET_CONTROL.map(([n, label, fields]) =>
+    `<button class="act danger" data-net="${n}" data-fields="${fields.join(",")}" ${allowed ? "" : "disabled"}>${esc(label)}</button>`).join("");
+}
+document.getElementById("netctl-buttons").addEventListener("click", async ev => {
+  const b = ev.target.closest("button");
+  if (!b || b.disabled) return;
+  const ids = {iface: "nc-iface", cidr: "nc-cidr", from_cidr: "nc-from", port: "nc-port"};
+  const body = {};
+  for (const f of b.dataset.fields.split(",")) {
+    const v = document.getElementById(ids[f]).value.trim();
+    if (!v) { alert("Fill in: " + f.replace("_", " ")); return; }
+    body[f] = f === "port" ? Number(v) : v;
+  }
+  if (!confirm("Change this node's network: " + b.textContent + "\n" + JSON.stringify(body) +
+               "\n\nThis can cut off your own connection to the node. Continue?")) return;
+  body.confirm = true;
+  showResult("running...");
+  try { showResult(await api("POST", "/api/net/" + b.dataset.net, body)); } catch (e) { showResult("Error: " + e.message); }
+});
+document.getElementById("btn-ping").addEventListener("click", async () => {
+  const ip = document.getElementById("ping-ip").value.trim() || firstPeerIp;
+  if (!ip) { alert("Enter an address to ping."); return; }
+  showResult("pinging " + ip + "...");
+  try { showResult(await api("POST", "/api/net/ping", {ip: ip, count: 3})); } catch (e) { showResult("Error: " + e.message); }
+});
+document.getElementById("btn-capture").addEventListener("click", async () => {
+  const body = {port: Number(document.getElementById("cap-port").value) || 47000,
+                seconds: Number(document.getElementById("cap-sec").value) || 10};
+  const iface = document.getElementById("cap-if").value.trim();
+  if (iface) body.iface = iface;
+  showResult("capturing for " + body.seconds + " s...");
+  try { showResult(await api("POST", "/api/net/capture", body)); } catch (e) { showResult("Error: " + e.message); }
+});
+document.getElementById("net-refresh").addEventListener("click", loadNet);
+document.getElementById("net-snapshot").addEventListener("click", async ev => {
+  const b = ev.target.closest("button[data-ping]");
+  if (!b) return;
+  showResult("pinging " + b.dataset.ping + "...");
+  window.scrollTo(0, 0);
+  try { showResult(await api("POST", "/api/net/ping", {ip: b.dataset.ping, count: 3})); } catch (e) { showResult("Error: " + e.message); }
+});
+
+/* ---------------- traffic ---------------- */
+const ARROW = {tx: "->", rx: "<-", fwd: "=>", wire: "~~", dgram: "<<"};
+let tr = {rows: [], since: null, session: "", paused: false, wire: false, open: new Set(), timer: null};
+function keyFields(e) {
+  const f = e.fields || {};
+  if (e.direction === "dgram") return (f.messages || []).join(" + ") + (f.padding_bytes ? " + " + f.padding_bytes + " B padding" : "");
+  if (e.summary != null) return e.summary;   // the protocol's own one-line summary
+  return Object.keys(f).slice(0, 6).map(k => k + "=" + String(f[k]).slice(0, 24)).join("  ");
+}
+function hexPretty(h) { return (h || "").replace(/(..)/g, "$1 ").replace(/((?:.. ){16})/g, "$1\n").trim(); }
+function renderTraffic() {
+  const filt = document.getElementById("tr-filter").value.trim().toLowerCase();
+  const dir = document.getElementById("tr-dir").value;
+  const rows = tr.rows.filter(e => (!filt || (e.name || "").toLowerCase().includes(filt)) && (!dir || e.direction === dir))
+                      .slice(-300).reverse();
+  document.getElementById("tr-body").innerHTML = rows.map(e => {
+    const id = (tr.wire ? "w" : "s") + e.seq, bad = !e.ok || (e.problems || []).length;
+    const who = e.direction === "wire" ? (e.src + " > " + e.dst) : e.peer;
+    let html = `<tr class="msg ${bad ? "bad" : ""}" data-id="${esc(id)}"><td>${esc((e.time || "").slice(11, 23))}</td>
+      <td class="dir">${ARROW[e.direction] || "??"} ${esc(e.direction)}</td><td>${esc(who)}</td>
+      <td>${esc(e.name)}${e.parts > 1 ? " <span class='why'>(" + e.part + "/" + e.parts + " of " + e.datagram_length + " B)</span>" : ""}</td><td>${esc(keyFields(e))}${(e.notes || []).length ? " <span class='why'>note: " + esc(e.notes.map(n => n.split(" (message is")[0]).join("; ")) + "</span>" : ""}${bad ? " <b>!! " + esc((e.problems || []).join("; ") || "failed checks") + "</b>" : ""}</td></tr>`;
+    if (tr.open.has(id)) html += `<tr class="detail"><td colspan="5"><dl class="kv">${Object.entries(e.fields || {}).map(([k, v]) =>
+        `<dt>${esc(k)}</dt><dd>${esc(typeof v === "object" ? JSON.stringify(v) : v)}</dd>`).join("")}
+        <dt>length</dt><dd>${e.length} bytes</dd></dl><pre>${esc(hexPretty(e.hex))}</pre></td></tr>`;
+    return html;
+  }).join("") || `<tr><td colspan="5">${tr.wire ? "Nothing captured." : "No messages yet."}</td></tr>`;
+}
+async function pollTraffic() {
+  if (tr.paused || tr.wire || !tr.session) return;
+  try {
+    const q = tr.since == null ? "limit=300" : "since=" + tr.since + "&limit=500";
+    const r = await api("GET", `/api/sessions/${encodeURIComponent(tr.session)}/traffic?${q}`);
+    if (tr.since != null && r.last_seq < tr.since) { tr.rows = []; tr.since = null; return; }
+    tr.rows = tr.rows.concat(r.entries).slice(-1000);
+    if (r.entries.length) tr.since = r.entries[r.entries.length - 1].seq; else if (tr.since == null) tr.since = r.last_seq;
+    document.getElementById("tr-status").textContent = "live, updated " + new Date().toLocaleTimeString();
+    renderTraffic();
+  } catch (e) { document.getElementById("tr-status").textContent = "error: " + e.message; }
+}
+function fillTrafficSessions(ids) {
+  const sel = document.getElementById("tr-session");
+  if (sel.options.length === ids.length) return;
+  sel.innerHTML = ids.map(i => `<option>${esc(i)}</option>`).join("");
+  if (!tr.session && ids.length) tr.session = ids[0];
+  sel.value = tr.session;
+}
+document.getElementById("tr-session").addEventListener("change", ev => {
+  tr.session = ev.target.value; tr.rows = []; tr.since = null; tr.open.clear(); renderTraffic(); pollTraffic();
+});
+document.getElementById("tr-filter").addEventListener("input", renderTraffic);
+document.getElementById("tr-dir").addEventListener("change", renderTraffic);
+document.getElementById("tr-pause").addEventListener("click", ev => {
+  tr.paused = !tr.paused;
+  ev.target.textContent = tr.paused ? "Resume" : "Pause";
+  document.getElementById("tr-status").textContent = tr.paused ? "PAUSED" : "";
+});
+document.getElementById("tr-body").addEventListener("click", ev => {
+  const row = ev.target.closest("tr.msg");
+  if (!row) return;
+  const id = row.dataset.id;
+  tr.open.has(id) ? tr.open.delete(id) : tr.open.add(id);
+  renderTraffic();
+});
+document.getElementById("tr-wire").addEventListener("click", async ev => {
+  if (!tr.session) return;
+  ev.target.disabled = true;
+  document.getElementById("tr-status").textContent = "capturing from the wire for 10 s...";
+  try {
+    const r = await api("GET", `/api/sessions/${encodeURIComponent(tr.session)}/wire?seconds=10`);
+    tr.wire = true; tr.liveRows = tr.rows; tr.rows = r.entries; tr.open.clear();
+    document.getElementById("tr-mode").textContent = "wire capture: UDP port " + r.port + ", " + r.entries.length + " packets";
+    document.getElementById("tr-live").classList.remove("hidden");
+    document.getElementById("tr-status").textContent = (r.error ? "capture problem: " + r.error + " " : "") +
+      (r.hints || []).map(h => "!! " + h).join(" ");
+    renderTraffic();
+  } catch (e) { document.getElementById("tr-status").textContent = "error: " + e.message; }
+  ev.target.disabled = false;
+});
+document.getElementById("tr-live").addEventListener("click", ev => {
+  tr.wire = false; tr.rows = tr.liveRows || []; tr.open.clear();
+  ev.target.classList.add("hidden");
+  document.getElementById("tr-mode").textContent = "live: every message scapegoat sends, receives and forwards";
+  renderTraffic(); pollTraffic();
+});
+
+/* ---------------- tabs + start ---------------- */
+function showTab(name) {
+  clearInterval(tr.timer);
+  if (name === "traffic") { pollTraffic(); tr.timer = setInterval(pollTraffic, 1000); }
+  for (const t of ["sessions", "traffic", "net"]) {
+    document.getElementById("view-" + t).classList.toggle("hidden", t !== name);
+    document.getElementById("tab-" + t).setAttribute("aria-selected", String(t === name));
+  }
+  if (name === "net") {
+    if (!document.getElementById("ping-ip").value && firstPeerIp) document.getElementById("ping-ip").value = firstPeerIp;
+    renderNetControls();
+    loadNet();
+  }
+}
+document.getElementById("tab-sessions").addEventListener("click", () => showTab("sessions"));
+document.getElementById("tab-net").addEventListener("click", () => showTab("net"));
+document.getElementById("tab-traffic").addEventListener("click", () => showTab("traffic"));
+
+api("GET", "/api/health").then(h => { health = h; renderNetControls(); renderAddrCheck(); }).catch(() => {});
+pollSessions();
+setInterval(pollSessions, 2000);
+</script>
+</body>
+</html>

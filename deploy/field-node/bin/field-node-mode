@@ -1,0 +1,233 @@
+#!/usr/bin/env bash
+# field-node-mode: switch this field node between the ways its pack can reach the sensor.
+#
+#   field-node-mode                  show the current mode, the pack's modes and the addresses
+#   sudo field-node-mode <mode>      switch (a pack may define aliases for mode names)
+#   field-node-mode <mode> --check   say what would change; change nothing (exit 3 if drift)
+#
+# Modes come from the pack in /etc/field-node/pack (pack.env + modes/<mode>.mode). A switch:
+#   1. writes the netplan file for SENSOR_IFACE (the addresses kept across reboots),
+#   2. adds/removes addresses on SENSOR_IFACE now (netplan is not re-applied, so other links
+#      are never disturbed),
+#   3. records the mode in /etc/field-node/mode,
+#   4. runs every mode hook in /usr/local/lib/field-node/mode.d/ with the same arguments
+#      (components install them; scapegoat renders its config there).
+# A mode may set PREFIX_ROUTE=false: each address is then applied as a /32 with no subnet
+# route, and only the hosts in its HOST_ROUTES_VAR get routes (on-link, from that address).
+# This keeps a second link on a subnet that also holds the uplink's gateway from taking the
+# default route. A mode with MANAGED=false (DHCP) is checked, never changed.
+# SENSOR_IFACE may be a glob (enx*) that matches exactly one interface.
+# Installed by deploy/field-node/install-field-node.sh.
+set -euo pipefail
+
+ROOT=${FIELD_ROOT:-}
+ENV_FILE=${FIELD_ENV:-$ROOT/etc/field-node/site.env}
+PACK=${FIELD_PACK_DIR:-$ROOT/etc/field-node/pack}
+HOOKS=${FIELD_HOOK_DIR:-$ROOT/usr/local/lib/field-node/mode.d}
+MODE_FILE="$ROOT/etc/field-node/mode"
+ME=$(basename "$0")
+
+CHECK=0
+WANT=""
+PASS=()
+for a in "$@"; do
+  case "$a" in
+    --check) CHECK=1; PASS+=("$a") ;;
+    --no-restart) PASS+=("$a") ;;
+    -h|--help) sed -n '2,16p' "$0"; exit 0 ;;
+    -*) echo "$ME: unknown option '$a'" >&2; exit 2 ;;
+    *) WANT=$a ;;
+  esac
+done
+
+[[ -f "$ENV_FILE" ]] || { echo "$ME: $ENV_FILE is missing; run install-field-node.sh --site <file> first" >&2; exit 1; }
+[[ -f "$PACK/pack.env" ]] || { echo "$ME: no field-node pack at $PACK" >&2; exit 1; }
+set -a
+# shellcheck disable=SC1090,SC1091
+. "$ENV_FILE"
+# shellcheck disable=SC1091
+. "$PACK/pack.env"
+set +a
+MODES=${MODES:?the field-node pack defines no MODES}
+if [[ $SENSOR_IFACE == *[\*\?]* ]]; then   # a glob such as enx*: exactly one interface must match
+  found=()
+  while read -r n; do
+    # shellcheck disable=SC2053
+    [[ $n == $SENSOR_IFACE ]] && found+=("$n")
+  done < <(ip -o link show 2>/dev/null | awk -F': ' '{print $2}' | cut -d@ -f1)
+  [[ ${#found[@]} -eq 1 ]] || { echo "$(basename "$0"): SENSOR_IFACE=$SENSOR_IFACE matches ${#found[@]} interfaces" >&2; exit 1; }
+  SENSOR_IFACE=${found[0]}
+fi
+
+current_mode() { [[ -f "$MODE_FILE" ]] && tr -d '[:space:]' < "$MODE_FILE" || true; }
+
+if [[ -z "$WANT" ]]; then
+  echo "Mode: $(current_mode || true)"
+  for m in $MODES; do
+    DESCRIPTION=""
+    # shellcheck disable=SC1090
+    . "$PACK/modes/$m.mode"
+    echo "  $m: $DESCRIPTION"
+  done
+  echo "Addresses on ${SENSOR_IFACE}:"
+  ip -4 -br addr show dev "$SENSOR_IFACE" 2>/dev/null || echo "  (cannot read ${SENSOR_IFACE})"
+  exit 0
+fi
+
+MODE=$WANT
+for pair in ${MODE_ALIASES:-}; do
+  [[ "${pair%%=*}" == "$WANT" ]] && MODE=${pair#*=}
+done
+in_list() { local x=$1 y; shift; for y in "$@"; do [[ $x == "$y" ]] && return 0; done; return 1; }
+# shellcheck disable=SC2086
+in_list "$MODE" $MODES || { echo "$ME: unknown mode '$WANT'. Modes: $MODES" >&2; exit 2; }
+
+if [[ $CHECK -eq 0 && -z "$ROOT" && $EUID -ne 0 ]]; then
+  echo "$ME: changing the mode needs root: sudo $ME $WANT" >&2
+  exit 1
+fi
+
+DRIFT=0
+say() { echo "$ME: $*"; }
+change() { DRIFT=1; if [[ $CHECK -eq 1 ]]; then say "would $*"; else say "$*"; fi; }
+
+mode_vars() {  # PREFIX_ROUTE HOST_ROUTES_VAR MANAGED of mode $1
+  PREFIX_ROUTE=true HOST_ROUTES_VAR="" MANAGED=true
+  # shellcheck disable=SC1090
+  . "$PACK/modes/$1.mode"
+}
+host32() { local c; for c in "$@"; do echo "${c%/*}/32"; done; }
+applied_cidrs() {  # the addresses as they sit on the interface in mode $1
+  mode_vars "$1"
+  if [[ $PREFIX_ROUTE == false ]]; then
+    # shellcheck disable=SC2046
+    host32 $(mode_cidrs "$1") | paste -sd' ' -
+  else
+    mode_cidrs "$1"
+  fi
+}
+host_routes() { mode_vars "$1"; [[ -n "$HOST_ROUTES_VAR" ]] && echo "${!HOST_ROUTES_VAR:-}"; true; }
+mode_cidrs() {
+  local v out=""
+  LOCAL_CIDRS_VARS=""
+  # shellcheck disable=SC1090
+  . "$PACK/modes/$1.mode"
+  for v in $LOCAL_CIDRS_VARS; do out+="${out:+ }${!v}"; done
+  echo "$out"
+}
+
+render_netplan() {
+  local list src h routes=""
+  list=$(applied_cidrs "$1" | tr ' ' '\n' | sed '/^$/d' | paste -sd, - | sed 's/,/, /g')
+  src=$(mode_cidrs "$1"); src=${src%% *}; src=${src%/*}
+  for h in $(host_routes "$1"); do
+    routes+=$'\n'"        - to: ${h}/32"$'\n'"          scope: link"$'\n'"          from: ${src}"
+  done
+  [[ -n "$routes" ]] && routes=$'\n'"      routes:${routes}"
+  cat <<EOT
+# Generated by field-node-mode (mode $1) from /etc/field-node/site.env. Do not edit by hand.
+# Sensor network on ${SENSOR_IFACE}: static addresses only, no DHCP, no gateway.
+network:
+  version: 2
+  ethernets:
+    ${SENSOR_IFACE}:
+      dhcp4: false
+      dhcp6: false
+      addresses: [${list}]${routes}
+EOT
+}
+
+put() {  # put <content> <path> <perm>: write if different
+  local content=$1 path=$2 perm=$3
+  if [[ -f "$path" ]] && [[ "$(cat "$path")" == "$content" ]]; then return 0; fi
+  change "write $path"
+  [[ $CHECK -eq 1 ]] && return 0
+  mkdir -p "$(dirname "$path")"
+  printf '%s\n' "$content" > "$path.tmp"
+  chmod "$perm" "$path.tmp"
+  mv "$path.tmp" "$path"
+}
+
+# shellcheck disable=SC1090
+is_managed() { MANAGED=true; . "$PACK/modes/$1.mode"; [[ $MANAGED != false ]]; }   # MANAGED=false: DHCP
+have=$(ip -4 -o addr show dev "$SENSOR_IFACE" 2>/dev/null | awk '{print $4}')
+read -ra want <<<"$(applied_cidrs "$MODE")"
+keep=("${want[@]+"${want[@]}"}")   # the mode's own addresses are never removed (static or DHCP)
+managed=()
+for m in $MODES; do is_managed "$m" || continue; read -ra cs <<<"$(applied_cidrs "$m")"; managed+=("${cs[@]}"); done
+NETPLAN="$ROOT/etc/netplan/55-${SENSOR_IFACE}-${NETPLAN_SUFFIX:-sensor}.yaml"
+if ! is_managed "$MODE"; then
+  # 1-2. DHCP mode: write nothing; drop a netplan file a static mode left; report the address
+  if [[ -f "$NETPLAN" ]]; then
+    change "remove $NETPLAN (mode $MODE takes its address from DHCP)"
+    [[ $CHECK -eq 1 ]] || rm -f "$NETPLAN"
+  fi
+  for c in "${want[@]}"; do
+    if grep -qxF "$c" <<<"$have"; then say "$c is on $SENSOR_IFACE (from DHCP)"
+    else say "WARNING: $c is not on $SENSOR_IFACE; check the DHCP lease (ip -br addr show dev $SENSOR_IFACE)"; fi
+  done
+  want=()
+fi
+# 1. netplan file (static modes only)
+if is_managed "$MODE"; then
+  put "$(render_netplan "$MODE")" "$NETPLAN" 600
+fi
+
+# 2. addresses now
+for c in "${want[@]+"${want[@]}"}"; do
+  if ! grep -qxF "$c" <<<"$have"; then
+    change "add $c on $SENSOR_IFACE"
+    [[ $CHECK -eq 1 ]] || ip addr add "$c" dev "$SENSOR_IFACE"
+  fi
+done
+for c in "${managed[@]}"; do
+  if ! in_list "$c" "${keep[@]+"${keep[@]}"}" && grep -qxF "$c" <<<"$have"; then
+    change "remove $c from $SENSOR_IFACE (not used in mode $MODE)"
+    [[ $CHECK -eq 1 ]] || ip addr del "$c" dev "$SENSOR_IFACE"
+    have=$(grep -vxF "$c" <<<"$have" || true)
+  fi
+done
+
+# 2b. host routes (modes with HOST_ROUTES_VAR): on-link /32 routes from the mode's address
+read -ra hosts <<<"$(host_routes "$MODE")"
+src=$(mode_cidrs "$MODE"); src=${src%% *}; src=${src%/*}
+for h in "${hosts[@]+"${hosts[@]}"}"; do
+  if ! ip -4 route show "$h/32" dev "$SENSOR_IFACE" 2>/dev/null | grep -q .; then
+    change "route $h/32 on $SENSOR_IFACE (on-link, from $src)"
+    [[ $CHECK -eq 1 ]] || ip route replace "$h/32" dev "$SENSOR_IFACE" scope link src "$src"
+  fi
+done
+for m in $MODES; do
+  for h in $(host_routes "$m"); do
+    if ! in_list "$h" "${hosts[@]+"${hosts[@]}"}" && ip -4 route show "$h/32" dev "$SENSOR_IFACE" 2>/dev/null | grep -q .; then
+      change "remove route $h/32 from $SENSOR_IFACE (not used in mode $MODE)"
+      [[ $CHECK -eq 1 ]] || ip route del "$h/32" dev "$SENSOR_IFACE"
+    fi
+  done
+done
+
+# 3. record the mode
+if [[ "$(current_mode || true)" != "$MODE" ]]; then
+  change "record mode $MODE in $MODE_FILE"
+  [[ $CHECK -eq 1 ]] || { mkdir -p "$(dirname "$MODE_FILE")"; echo "$MODE" > "$MODE_FILE"; }
+fi
+
+# 4. mode hooks (exit 3 from a hook in --check mode = drift)
+if [[ -d "$HOOKS" ]]; then
+  for h in "$HOOKS"/*; do
+    [[ -x "$h" ]] || continue
+    rc=0
+    FIELD_ROOT="$ROOT" FIELD_ENV="$ENV_FILE" FIELD_PACK_DIR="$PACK" "$h" "$MODE" "${PASS[@]+"${PASS[@]}"}" || rc=$?
+    if [[ $rc -eq 3 && $CHECK -eq 1 ]]; then DRIFT=1
+    elif [[ $rc -ne 0 ]]; then echo "$ME: mode hook $(basename "$h") failed (exit $rc)" >&2; exit 1
+    fi
+  done
+fi
+
+if [[ $DRIFT -eq 0 ]]; then
+  say "mode $MODE: already in place, nothing to change"
+elif [[ $CHECK -eq 1 ]]; then
+  exit 3
+else
+  say "mode $MODE is set"
+fi

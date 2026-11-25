@@ -1,0 +1,5 @@
+DESCRIPTION="the sensor interface takes its address from DHCP; SENSOR_CIDRS is checked, never set"
+LOCAL_CIDRS_VARS="SENSOR_CIDRS"
+PEER_VAR=""
+CANDIDATES_VAR=""
+MANAGED=false

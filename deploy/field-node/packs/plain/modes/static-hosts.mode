@@ -1,0 +1,6 @@
+DESCRIPTION="static address with no subnet route; only the hosts in SENSOR_HOST_ROUTES are routed on this interface"
+LOCAL_CIDRS_VARS="SENSOR_CIDRS"
+PEER_VAR=""
+CANDIDATES_VAR=""
+PREFIX_ROUTE=false
+HOST_ROUTES_VAR=SENSOR_HOST_ROUTES

@@ -1,0 +1,19 @@
+# scapegoat site config: /etc/scapegoat/scapegoat.toml
+#
+# The profile below supplies every default. Write here ONLY what is different at
+# this site; a value here overrides the profile. List profiles: scapegoat profiles
+# After editing:  sudo systemctl restart scapegoat
+#
+# This default talks to the toy simulator on this computer (`scapegoat sim toy`).
+# For a real sensor, install its protocol plugin and use one of its profiles.
+
+profile = "sim-local"
+
+# A short name for this node (used when publishing status).
+node_name = "scapegoat-node"
+
+# Free text shown first on the web page, its browser tab and `scapegoat status`.
+# node_role = "C2 node · Pi A"
+
+# Publish status to an island REST endpoint every 5 s. "" = off.
+# island_rest = "http://127.0.0.1:8000"

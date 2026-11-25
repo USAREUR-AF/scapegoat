@@ -1,0 +1,28 @@
+# Example scapegoat config with every common key (toy protocol, simulator on loopback).
+# Copy what you need into /etc/scapegoat/scapegoat.toml.
+
+bind = "127.0.0.1:8730"          # the HTTP API and web page
+allow_net_control = false        # let `scapegoat net <action> --confirm` change the network
+node_name = "scapegoat-node"
+node_role = ""
+island_rest = ""                 # "" = do not publish status
+topology = "same-lan"            # same-lan | routed: how this node reaches the sensor
+expected_local_address = ""      # e.g. "192.0.2.10/24": checked and shown, never applied
+# plugin_path = ["/opt/scapegoat/plugins"]   # extra protocol plugin directories
+
+[features]
+radiate_control = false          # actions a protocol marks as radiate-gated stay hidden
+
+[sessions.sensor]
+protocol = "toy"                 # a built-in protocol or an installed plugin
+enabled = true
+local = "127.0.0.1:47000"        # our side; one socket sends and receives
+peer = "127.0.0.1:47001"         # the sensor's address:port
+peer_candidates = []             # other addresses to try; the first that answers is locked
+forward = []                     # copy every received message to these address:port
+forward_mode = "message"         # message | datagram
+allow_radiate_control = false
+
+[sessions.sensor.protocol_settings]
+keepalive_interval_s = 3
+establish_after = 3

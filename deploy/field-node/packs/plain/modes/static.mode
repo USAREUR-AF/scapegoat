@@ -1,0 +1,4 @@
+DESCRIPTION="static addresses on the sensor interface (SENSOR_CIDRS)"
+LOCAL_CIDRS_VARS="SENSOR_CIDRS"
+PEER_VAR=""
+CANDIDATES_VAR=""

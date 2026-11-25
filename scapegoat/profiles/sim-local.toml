@@ -1,0 +1,23 @@
+# TESTING. Talk to the open toy simulator on this computer (any laptop, no sensor).
+#
+# Start the simulator in one terminal:   scapegoat sim toy --bind 127.0.0.1:47001
+# then run scapegoat with this profile. Keepalives every 3 s so the link comes up quickly.
+
+bind = "127.0.0.1:8730"
+allow_net_control = false
+
+# radiate_control: dangerous actions (none in toy) stay behind the safety latch.
+[features]
+radiate_control = true
+
+[sessions.sensor]
+protocol = "toy"
+enabled = true
+local = "127.0.0.1:47000"
+peer = "127.0.0.1:47001"
+peer_candidates = []
+forward = []
+
+[sessions.sensor.protocol_settings]
+keepalive_interval_s = 3
+establish_after = 3

@@ -1,0 +1,18 @@
+[Unit]
+Description=scapegoat - C2 side of a sensor link (keeps the sensor sending)
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+# Root: binds the sensor port and runs the network tools (ip, tcpdump, ufw).
+User=root
+WorkingDirectory=/opt/scapegoat
+Environment=PYTHONPATH=/opt/scapegoat
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/usr/bin/python3 -m scapegoat serve --config /etc/scapegoat/scapegoat.toml
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
