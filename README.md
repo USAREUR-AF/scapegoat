@@ -1,5 +1,7 @@
 # scapegoat
 
+**[usareur-af.github.io/scapegoat](https://usareur-af.github.io/scapegoat/)**
+
 scapegoat runs on a small computer (a Raspberry Pi, for example) on a sensor's network and
 plays the **C2 side of a sensor link**. It is for sensors that send nothing until a C2 system
 speaks to them first. scapegoat speaks first, keeps the link alive and shows whether the

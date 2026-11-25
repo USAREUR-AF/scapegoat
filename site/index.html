@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>scapegoat: the C2 side of a sensor link</title>
+<meta name="description" content="scapegoat speaks first, so a sensor that waits for its C2 system starts sending. It keeps the link alive, shows whether the sensor is answering, and sends its tracks on as ASTERIX, CoT or SAPIENT.">
+<link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="assets/site.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <a class="brand" href="#top"><img src="assets/icon.svg" width="28" height="28" alt="">scapegoat</a>
+    <nav aria-label="Sections">
+      <a href="#what">What it is</a><a href="#states">The link</a><a href="#outputs">Outputs</a><a href="#start">Start</a>
+      <a class="gh" href="https://github.com/USAREUR-AF/scapegoat">GitHub</a>
+    </nav>
+  </header>
+</div>
+
+<main id="top">
+<section class="hero" aria-labelledby="name">
+<pre class="bgcode" aria-hidden="true">States:
+  disabled     -> not running (or turned off by an operator)
+  handshaking  -> sending keepalives, nothing received yet
+  establishing -> peer keepalives arriving, fewer than establish_after so far
+  established  -> link up
+  degraded     -> one expected peer keepalive missed
+  lost         -> two consecutive peer keepalives missed (keeps sending)
+
+Peer candidates: until a sensor answers, every keepalive goes to EVERY candidate
+address, each with its own LinkState (its own counters). The first candidate
+whose IP sends a valid keepalive becomes the locked peer; the others are
+dropped until `reset` (or a forced `lock`).</pre>
+  <div class="wrap hero-grid">
+    <div>
+      <p class="prompt">&gt;_ scapegoat watch sensor<span class="cur" aria-hidden="true"></span></p>
+      <h1 class="wordmark" id="name">scapegoat</h1>
+      <p class="tagline">It speaks first, so the sensor starts sending.</p>
+      <p class="lede">Some sensors send nothing until a C2 system talks to them. scapegoat runs on a small computer on the sensor's network and plays that C2 side: it opens the link, keeps it alive and shows whether the sensor is answering. A protocol is a plugin, and the tracks a plugin reads go out as ASTERIX CAT062, CoT or SAPIENT.</p>
+      <div class="buttons">
+        <a class="btn star" href="https://github.com/USAREUR-AF/scapegoat"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" d="M12 2.8l2.8 5.8 6.4.9-4.6 4.5 1.1 6.3L12 17.3l-5.7 3 1.1-6.3-4.6-4.5 6.4-.9z"/></svg>Star on GitHub</a>
+        <a class="btn" href="#start">Quick start</a>
+        <a class="btn" href="https://github.com/USAREUR-AF/scapegoat#readme">README</a>
+        <a class="btn" href="https://github.com/USAREUR-AF/scapegoat/blob/main/docs/plugins.md">Write a plugin</a>
+      </div>
+      <div class="cmd"><pre data-box="command"><span class="ln"><span class="dollar">$ </span><code id="c-start">python3 <span class="w">-m</span> scapegoat sim toy <span class="w">--bind</span> <span class="w">127.0.0.1:47001</span> &amp; python3 <span class="w">-m</span> scapegoat serve <span class="w">--config</span> <span class="w">deploy/scapegoat.toml</span></code></span></pre><button class="copy" type="button" data-copy="c-start">Copy</button></div>
+    </div>
+
+    <div class="stage" role="img" aria-label="A recorded scapegoat session against the toy simulator, replayed. scapegoat sends keepalives with no answer, the simulator starts and answers, and the link goes from handshaking to establishing to established. The simulator is stopped: one missed keepalive makes the link degraded, a second makes it lost, and scapegoat keeps sending. The simulator starts again and the link is established again.">
+      <div class="stage-head"><span><b>scapegoat</b> session sensor &middot; toy simulator</span><span id="stage-clock">t = 37.9 s</span></div>
+      <ol class="ladder" id="ladder" aria-hidden="true">
+        <li data-s="handshaking">handshaking</li><li data-s="establishing">establishing</li><li data-s="established" class="on">established</li><li data-s="degraded">degraded</li><li data-s="lost">lost</li>
+      </ol>
+      <pre class="stage-lines" id="stage-lines" aria-hidden="true"><span class="st">== lost -&gt; establishing: peer keepalive after link lost</span>
+<span class="rx">&lt;- Data       payload='tick 1'</span>
+<span class="rx">&lt;- KeepAlive  transmit_counter=2 receive_counter=10</span>
+<span class="tx">-&gt; KeepAlive  transmit_counter=11 receive_counter=2</span>
+<span class="rx">&lt;- Data       payload='tick 2'</span>
+<span class="rx">&lt;- KeepAlive  transmit_counter=3 receive_counter=11</span>
+<span class="st">== establishing -&gt; established: 3 keepalives received</span>
+<span class="tx">-&gt; KeepAlive  transmit_counter=12 receive_counter=3</span></pre>
+      <div class="stage-foot">A real session, recorded by <code>site/record.py</code> on 127.0.0.1 and replayed at three times speed. <span class="k-tx">-&gt; sent</span> <span class="k-rx">&lt;- received</span> <span class="k-st">== link state</span></div>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <div class="numbers">
+      <div><span class="n" data-measure="states">6</span><span class="l">link states, each change logged with its reason</span><code>STATES in scapegoat/core/session.py</code></div>
+      <div><span class="n" data-measure="formats">3</span><span class="l">standard track formats out</span><code>FORMATS in scapegoat/core/outputs.py</code></div>
+      <div><span class="n" data-measure="packages">0</span><span class="l">packages to install: standard library only</span><code>imports in scapegoat/ outside sys.stdlib_module_names</code></div>
+      <div><span class="n" data-measure="tests">171</span><span class="l">tests, run on every pull request</span><code>def test* in tests/</code></div>
+    </div>
+  </div>
+</section>
+
+<section class="band" id="what">
+  <div class="wrap">
+    <h2>What it is</h2>
+    <p class="sub">A sensor on a local network can wait for its C2 system to speak before it sends anything. scapegoat is that first voice. It runs as a <code>systemd</code> service on a Raspberry Pi or any Linux computer next to the sensor, with no internet access needed. It is part of goat: its tracks reach the data fabric as standard formats encoded by <a href="https://usareur-af.github.io/goat-transformers/">goat-transformers</a>, and a whole node around it is built from one site file.</p>
+    <div class="cards">
+      <div class="card"><h3>It speaks first and keeps the link alive</h3><p>One UDP socket per sensor sends and receives. A keepalive goes to every candidate address until one answers; scapegoat then locks onto it and keeps the schedule going, even after the sensor goes quiet. <code>scapegoat/core/session.py</code></p></div>
+      <div class="card"><h3>It shows whether the sensor is answering</h3><p><code>scapegoat status</code>, <code>events</code> and <code>watch</code> on the command line, and the same view on a web page at <code>127.0.0.1:8730</code> with no build step. Every message is logged with its decoded fields and any problem found in it.</p></div>
+      <div class="card"><h3>A protocol is a plugin</h3><p>The core owns sockets, timers and state; a plugin builds and reads bytes and names its own device. The <code>toy</code> protocol and its simulator ship with the core, and <code>scapegoat/conformance</code> checks any plugin against the contract. <a href="https://github.com/USAREUR-AF/scapegoat/blob/main/docs/plugins.md"><code>docs/plugins.md</code></a></p></div>
+    </div>
+  </div>
+</section>
+
+<section class="band" id="states">
+  <div class="wrap feature">
+    <div>
+      <h2>Every state change says why</h2>
+      <p>The link moves through six states, and each move is an event with its reason. This is the event log from the session in the first screen: the simulator starts, is stopped, and starts again. scapegoat never stops sending, so the link comes back by itself.</p>
+      <pre class="json" data-box="output" id="event-log"><span class="ln">disabled -&gt; handshaking: socket open, sending keepalives</span><span class="ln">handshaking -&gt; establishing: first keepalive from peer</span><span class="ln">establishing -&gt; established: 3 keepalives received</span><span class="ln">established -&gt; degraded: one keepalive from peer missed (3.8 s)</span><span class="ln">degraded -&gt; lost: no keepalive from peer for 6.8 s (two missed); still sending keepalives</span><span class="ln">lost -&gt; establishing: peer keepalive after link lost</span><span class="ln">establishing -&gt; established: 3 keepalives received</span></pre>
+      <p>When more than one address could be the sensor, every one gets keepalives with its own counters until the first answers. <code>scapegoat lock</code> forces the choice; <code>scapegoat reset</code> starts over.</p>
+    </div>
+    <figure>
+      <svg class="fsm" viewBox="0 0 880 300" role="img" aria-label="The link state machine. disabled goes to handshaking when the socket opens. handshaking goes to establishing on the first reply. establishing goes to established after three replies. established goes to degraded when one keepalive is missed; degraded goes back to established on a reply, or to lost when a second is missed. lost goes to establishing on a reply.">
+        <defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="fh"/></marker></defs>
+        <g class="b"><rect x="16" y="40" width="140" height="54" rx="6"/><text x="86" y="73">disabled</text></g>
+        <g class="b"><rect x="252" y="40" width="140" height="54" rx="6"/><text x="322" y="73">handshaking</text></g>
+        <g class="b"><rect x="488" y="40" width="140" height="54" rx="6"/><text x="558" y="73">establishing</text></g>
+        <g class="b up"><rect x="724" y="40" width="140" height="54" rx="6"/><text x="794" y="73">established</text></g>
+        <g class="b dn"><rect x="488" y="206" width="140" height="54" rx="6"/><text x="558" y="239">lost</text></g>
+        <g class="b dg"><rect x="724" y="206" width="140" height="54" rx="6"/><text x="794" y="239">degraded</text></g>
+        <path class="a" d="M156 67H250" marker-end="url(#ah)"/><text class="l" x="204" y="58">socket open</text>
+        <path class="a" d="M392 67H486" marker-end="url(#ah)"/><text class="l" x="440" y="58">first reply</text>
+        <path class="a" d="M628 67H722" marker-end="url(#ah)"/><text class="l" x="676" y="58">3 replies</text>
+        <path class="a" d="M774 94V204" marker-end="url(#ah)"/><text class="l e" x="766" y="154">1 missed</text>
+        <path class="a" d="M814 206V96" marker-end="url(#ah)"/><text class="l s" x="822" y="154">reply</text>
+        <path class="a" d="M724 233H630" marker-end="url(#ah)"/><text class="l" x="677" y="224">2 missed</text>
+        <path class="a" d="M558 206V96" marker-end="url(#ah)"/><text class="l e" x="550" y="154">reply</text>
+        <text class="n" x="558" y="282">keeps sending keepalives</text>
+      </svg>
+      <figcaption>The states and transitions in <code>scapegoat/core/session.py</code>. With the <code>sim-local</code> profile, three replies establish the link.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<section class="band" id="outputs">
+  <div class="wrap feature">
+    <div>
+      <h2>Tracks leave in standard formats</h2>
+      <p>A protocol plugin that reads tracks from its sensor hands them to the core through one hook, <code>tracks(msg)</code>. The core encodes each track with goat-transformers' published packs and sends it to every output you configure, over UDP (unicast or multicast) or to a Zenoh key. No format is encoded by hand, and the tests reproduce every CAT062 test vector in goat-transformers byte for byte.</p>
+      <p>Each output has its own <code>enabled</code> switch and optional session list. Without goat-transformers the outputs are off and <code>scapegoat status</code> says why.</p>
+    </div>
+    <div>
+      <pre class="json" data-box="output"><span class="ln">[transformers]</span><span class="ln">path = "/opt/goat-transformers"</span><span class="ln"> </span><span class="ln">[outputs.cat062]</span><span class="ln">format = "asterix-cat062"</span><span class="ln">to = ["udp://239.255.62.1:8600", "zenoh:site/sensor/cat062"]</span><span class="ln">sac = 1</span><span class="ln">sic = 7</span></pre>
+      <div class="scroll"><table>
+        <thead><tr><th>Format</th><th>Settings</th></tr></thead>
+        <tbody>
+          <tr><td><code>asterix-cat062</code></td><td><code>sac</code>, <code>sic</code></td></tr>
+          <tr><td><code>cot-xml</code></td><td><code>how</code>, <code>stale_s</code>, <code>uid_prefix</code></td></tr>
+          <tr><td><code>sapient</code></td><td><code>node_id</code>, <code>uid_prefix</code></td></tr>
+        </tbody>
+      </table></div>
+    </div>
+  </div>
+</section>
+
+<section class="band" id="node">
+  <div class="wrap">
+    <h2>A whole node from one site file</h2>
+    <p class="sub"><code>deploy/field-node/</code> builds the computer scapegoat runs on: its addresses and network mode, scapegoat itself, capture of the sensor's traffic and goat-transformers at a pinned version. On the node, <code>scapegoat net</code> is a read-only view of interfaces, routes, neighbors, listeners and firewall, with a plain-language hint for each problem it finds. Changes to the network need <code>allow_net_control = true</code> in the config and <code>--confirm</code> on the command.</p>
+    <div class="cards">
+      <div class="card"><h3>Installs offline</h3><p><code>sudo ./deploy/install.sh</code> puts the program in <code>/opt/scapegoat</code>, the config in <code>/etc/scapegoat/scapegoat.toml</code> and the <code>scapegoat</code> service under systemd. Nothing is downloaded.</p></div>
+      <div class="card"><h3>Profiles hold the defaults</h3><p>A site config names a profile and writes only what differs at that site. <code>scapegoat profiles</code> lists them; a plugin adds its own.</p></div>
+      <div class="card"><h3>Simulators for every protocol</h3><p><code>scapegoat sim toy</code> is a peer that waits to be spoken to first, the way a real sensor does. The first screen of this page is scapegoat talking to it.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="band" id="start">
+  <div class="wrap">
+    <h2>Quick start</h2>
+    <p class="sub">Python 3.11 or newer on Linux or macOS. Nothing else to install.</p>
+    <pre class="block" data-box="command"><span class="ln">git clone <span class="w">https://github.com/USAREUR-AF/scapegoat</span>
+</span><span class="ln">cd <span class="w">scapegoat</span>
+</span><span class="ln">python3 -m scapegoat sim toy --bind 127.0.0.1:47001 &amp;
+</span><span class="ln">python3 -m scapegoat serve --config <span class="w">deploy/scapegoat.toml</span> &amp;
+</span><span class="ln">python3 -m scapegoat status
+</span><span class="ln">python3 -m scapegoat watch sensor</span></pre>
+    <p>Then open <code>http://127.0.0.1:8730</code>. Tests: <code>python3 -m unittest discover -s tests -t .</code></p>
+    <p><a href="https://github.com/USAREUR-AF/scapegoat#readme">README</a> &middot; <a href="https://github.com/USAREUR-AF/scapegoat/blob/main/docs/plugins.md">Writing a protocol plugin</a> &middot; <a href="https://github.com/USAREUR-AF/scapegoat/blob/main/deploy/field-node/README.md">Field node</a></p>
+  </div>
+</section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <p><a href="https://github.com/USAREUR-AF/scapegoat">Repository</a><a href="https://github.com/USAREUR-AF/scapegoat/blob/main/LICENSE">Apache License 2.0</a><a href="https://github.com/USAREUR-AF/scapegoat/blob/main/SECURITY.md">Security policy</a></p>
+    <p>Portions written by U.S. Federal government employees within the scope of their employment are in the public domain in the United States. Part of <a href="https://github.com/USAREUR-AF/goatcore">goat</a>.</p>
+  </div>
+</footer>
+<script src="assets/site.js" defer></script>
+</body>
+</html>

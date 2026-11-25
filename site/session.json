@@ -1,0 +1,267 @@
+{
+ "source": "site/record.py: scapegoat serve (deploy/scapegoat.toml) and scapegoat sim toy on 127.0.0.1",
+ "lines": [
+  {
+   "t": 0.0,
+   "kind": "socket",
+   "level": "info",
+   "text": "listening on 127.0.0.1:47000, peer 127.0.0.1:47001"
+  },
+  {
+   "t": 0.0,
+   "kind": "state",
+   "level": "info",
+   "text": "disabled -> handshaking: socket open, sending keepalives"
+  },
+  {
+   "t": 0.15,
+   "dir": "tx",
+   "name": "KeepAlive",
+   "text": "transmit_counter=1 receive_counter=0 action=0 flags=0",
+   "hex": "4b410a00010000000097"
+  },
+  {
+   "t": 3.22,
+   "dir": "tx",
+   "name": "KeepAlive",
+   "text": "transmit_counter=2 receive_counter=0 action=0 flags=0",
+   "hex": "4b410a00020000000098"
+  },
+  {
+   "t": 6.3,
+   "kind": "peer",
+   "level": "info",
+   "text": "peer answering from 127.0.0.1:47001"
+  },
+  {
+   "t": 6.3,
+   "kind": "lock",
+   "level": "info",
+   "text": "locked onto 127.0.0.1:47001"
+  },
+  {
+   "t": 6.3,
+   "kind": "state",
+   "level": "info",
+   "text": "handshaking -> establishing: first keepalive from peer"
+  },
+  {
+   "t": 6.3,
+   "kind": "kind",
+   "level": "info",
+   "text": "peer is SIMULATOR at 127.0.0.1:47001"
+  },
+  {
+   "t": 6.3,
+   "dir": "tx",
+   "name": "KeepAlive",
+   "text": "transmit_counter=3 receive_counter=0 action=0 flags=0",
+   "hex": "4b410a00030000000099"
+  },
+  {
+   "t": 6.3,
+   "dir": "rx",
+   "name": "KeepAlive",
+   "text": "transmit_counter=1 receive_counter=3 action=0 flags=1",
+   "hex": "4b410a0001000300019b"
+  },
+  {
+   "t": 6.3,
+   "dir": "rx",
+   "name": "Data",
+   "text": "payload='tick 1'",
+   "hex": "44540a7469636b20319e"
+  },
+  {
+   "t": 9.33,
+   "dir": "rx",
+   "name": "KeepAlive",
+   "text": "transmit_counter=2 receive_counter=3 action=0 flags=1",
+   "hex": "4b410a0002000300019c"
+  },
+  {
+   "t": 9.39,
+   "dir": "tx",
+   "name": "KeepAlive",
+   "text": "transmit_counter=4 receive_counter=2 action=0 flags=0",
+   "hex": "4b410a0004000200009c"
+  },
+  {
+   "t": 11.34,
+   "dir": "rx",
+   "name": "Data",
+   "text": "payload='tick 2'",
+   "hex": "44540a7469636b20329f"
+  },
+  {
+   "t": 12.34,
+   "kind": "state",
+   "level": "info",
+   "text": "establishing -> established: 3 keepalives received"
+  },
+  {
+   "t": 12.34,
+   "dir": "rx",
+   "name": "KeepAlive",
+   "text": "transmit_counter=3 receive_counter=4 action=0 flags=1",
+   "hex": "4b410a0003000400019e"
+  },
+  {
+   "t": 12.49,
+   "dir": "tx",
+   "name": "KeepAlive",
+   "text": "transmit_counter=5 receive_counter=3 action=0 flags=0",
+   "hex": "4b410a0005000300009e"
+  },
+  {
+   "t": 15.42,
+   "dir": "rx",
+   "name": "KeepAlive",
+   "text": "transmit_counter=4 receive_counter=5 action=0 flags=1",
+   "hex": "4b410a000400050001a0"
+  },
+  {
+   "t": 15.57,
+   "dir": "tx",
+   "name": "KeepAlive",
+   "text": "transmit_counter=6 receive_counter=4 action=0 flags=0",
+   "hex": "4b410a000600040000a0"
+  },
+  {
+   "t": 16.37,
+   "dir": "rx",
+   "name": "Data",
+   "text": "payload='tick 4'",
+   "hex": "44540a7469636b2034a1"
+  },
+  {
+   "t": 18.49,
+   "dir": "rx",
+   "name": "KeepAlive",
+   "text": "transmit_counter=5 receive_counter=6 action=0 flags=1",
+   "hex": "4b410a000500060001a2"
+  },
+  {
+   "t": 18.66,
+   "dir": "tx",
+   "name": "KeepAlive",
+   "text": "transmit_counter=7 receive_counter=5 action=0 flags=0",
+   "hex": "4b410a000700050000a2"
+  },
+  {
+   "t": 21.75,
+   "dir": "tx",
+   "name": "KeepAlive",
+   "text": "transmit_counter=8 receive_counter=5 action=0 flags=0",
+   "hex": "4b410a000800050000a3"
+  },
+  {
+   "t": 22.37,
+   "kind": "state",
+   "level": "warn",
+   "text": "established -> degraded: one keepalive from peer missed (3.9 s)"
+  },
+  {
+   "t": 24.83,
+   "dir": "tx",
+   "name": "KeepAlive",
+   "text": "transmit_counter=9 receive_counter=5 action=0 flags=0",
+   "hex": "4b410a000900050000a4"
+  },
+  {
+   "t": 25.28,
+   "kind": "state",
+   "level": "warn",
+   "text": "degraded -> lost: no keepalive from peer for 6.8 s (two missed); still sending keepalives"
+  },
+  {
+   "t": 27.89,
+   "kind": "state",
+   "level": "info",
+   "text": "lost -> establishing: peer keepalive after link lost"
+  },
+  {
+   "t": 27.89,
+   "dir": "tx",
+   "name": "KeepAlive",
+   "text": "transmit_counter=10 receive_counter=5 action=0 flags=0",
+   "hex": "4b410a000a00050000a5"
+  },
+  {
+   "t": 27.89,
+   "dir": "rx",
+   "name": "KeepAlive",
+   "text": "transmit_counter=1 receive_counter=10 action=0 flags=1",
+   "hex": "4b410a0001000a0001a2"
+  },
+  {
+   "t": 27.89,
+   "dir": "rx",
+   "name": "Data",
+   "text": "payload='tick 1'",
+   "hex": "44540a7469636b20319e"
+  },
+  {
+   "t": 31.21,
+   "dir": "tx",
+   "name": "KeepAlive",
+   "text": "transmit_counter=11 receive_counter=1 action=0 flags=0",
+   "hex": "4b410a000b00010000a2"
+  },
+  {
+   "t": 31.22,
+   "dir": "rx",
+   "name": "KeepAlive",
+   "text": "transmit_counter=2 receive_counter=10 action=0 flags=1",
+   "hex": "4b410a0002000a0001a3"
+  },
+  {
+   "t": 32.96,
+   "dir": "rx",
+   "name": "Data",
+   "text": "payload='tick 2'",
+   "hex": "44540a7469636b20329f"
+  },
+  {
+   "t": 34.02,
+   "kind": "state",
+   "level": "info",
+   "text": "establishing -> established: 3 keepalives received"
+  },
+  {
+   "t": 34.02,
+   "dir": "rx",
+   "name": "KeepAlive",
+   "text": "transmit_counter=3 receive_counter=11 action=0 flags=1",
+   "hex": "4b410a0003000b0001a5"
+  },
+  {
+   "t": 34.23,
+   "dir": "tx",
+   "name": "KeepAlive",
+   "text": "transmit_counter=12 receive_counter=3 action=0 flags=0",
+   "hex": "4b410a000c00030000a5"
+  },
+  {
+   "t": 37.06,
+   "dir": "rx",
+   "name": "KeepAlive",
+   "text": "transmit_counter=4 receive_counter=12 action=0 flags=1",
+   "hex": "4b410a0004000c0001a7"
+  },
+  {
+   "t": 37.31,
+   "dir": "tx",
+   "name": "KeepAlive",
+   "text": "transmit_counter=13 receive_counter=4 action=0 flags=0",
+   "hex": "4b410a000d00040000a7"
+  },
+  {
+   "t": 38.02,
+   "dir": "rx",
+   "name": "Data",
+   "text": "payload='tick 4'",
+   "hex": "44540a7469636b2034a1"
+  }
+ ]
+}
