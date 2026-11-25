@@ -49,30 +49,22 @@ dropped until `reset` (or a forced `lock`).</pre>
     </div>
 
     <div class="stage" role="img" aria-label="A recorded scapegoat session against the toy simulator, replayed. scapegoat sends keepalives with no answer, the simulator starts and answers, and the link goes from handshaking to establishing to established. The simulator is stopped: one missed keepalive makes the link degraded, a second makes it lost, and scapegoat keeps sending. The simulator starts again and the link is established again.">
-      <div class="stage-head"><span><b>scapegoat</b> session sensor &middot; toy simulator</span><span id="stage-clock">t = 37.9 s</span></div>
+      <div class="stage-head"><span><b>scapegoat</b> session sensor &middot; toy simulator</span><span id="stage-clock">t = 41.2 s</span></div>
       <ol class="ladder" id="ladder" aria-hidden="true">
         <li data-s="handshaking">handshaking</li><li data-s="establishing">establishing</li><li data-s="established" class="on">established</li><li data-s="degraded">degraded</li><li data-s="lost">lost</li>
       </ol>
-      <pre class="stage-lines" id="stage-lines" aria-hidden="true"><span class="st">== lost -&gt; establishing: peer keepalive after link lost</span>
-<span class="rx">&lt;- Data       payload='tick 1'</span>
-<span class="rx">&lt;- KeepAlive  transmit_counter=2 receive_counter=10</span>
-<span class="tx">-&gt; KeepAlive  transmit_counter=11 receive_counter=2</span>
+      <pre class="stage-lines" id="stage-lines" aria-hidden="true"><span class="tx">-&gt; KeepAlive  seq=12 ack=2</span>
 <span class="rx">&lt;- Data       payload='tick 2'</span>
-<span class="rx">&lt;- KeepAlive  transmit_counter=3 receive_counter=11</span>
 <span class="st">== establishing -&gt; established: 3 keepalives received</span>
-<span class="tx">-&gt; KeepAlive  transmit_counter=12 receive_counter=3</span></pre>
+<span class="rx">&lt;- KeepAlive  seq=3 ack=12</span>
+<span class="tx">-&gt; KeepAlive  seq=13 ack=3</span>
+<span class="rx">&lt;- KeepAlive  seq=4 ack=13</span>
+<span class="tx">-&gt; KeepAlive  seq=14 ack=4</span>
+<span class="rx">&lt;- Data       payload='tick 4'</span></pre>
       <div class="stage-foot">A real session, recorded by <code>site/record.py</code> on 127.0.0.1 and replayed at three times speed. <span class="k-tx">-&gt; sent</span> <span class="k-rx">&lt;- received</span> <span class="k-st">== link state</span></div>
     </div>
   </div>
 
-  <div class="wrap">
-    <div class="numbers">
-      <div><span class="n" data-measure="states">6</span><span class="l">link states, each change logged with its reason</span><code>STATES in scapegoat/core/session.py</code></div>
-      <div><span class="n" data-measure="formats">3</span><span class="l">standard track formats out</span><code>FORMATS in scapegoat/core/outputs.py</code></div>
-      <div><span class="n" data-measure="packages">0</span><span class="l">packages to install: standard library only</span><code>imports in scapegoat/ outside sys.stdlib_module_names</code></div>
-      <div><span class="n" data-measure="tests">171</span><span class="l">tests, run on every pull request</span><code>def test* in tests/</code></div>
-    </div>
-  </div>
 </section>
 
 <section class="band" id="what">
@@ -92,7 +84,7 @@ dropped until `reset` (or a forced `lock`).</pre>
     <div>
       <h2>Every state change says why</h2>
       <p>The link moves through six states, and each move is an event with its reason. This is the event log from the session in the first screen: the simulator starts, is stopped, and starts again. scapegoat never stops sending, so the link comes back by itself.</p>
-      <pre class="json" data-box="output" id="event-log"><span class="ln">disabled -&gt; handshaking: socket open, sending keepalives</span><span class="ln">handshaking -&gt; establishing: first keepalive from peer</span><span class="ln">establishing -&gt; established: 3 keepalives received</span><span class="ln">established -&gt; degraded: one keepalive from peer missed (3.8 s)</span><span class="ln">degraded -&gt; lost: no keepalive from peer for 6.8 s (two missed); still sending keepalives</span><span class="ln">lost -&gt; establishing: peer keepalive after link lost</span><span class="ln">establishing -&gt; established: 3 keepalives received</span></pre>
+      <pre class="json" data-box="output" id="event-log"><span class="ln">disabled -&gt; handshaking: socket open, sending keepalives</span><span class="ln">handshaking -&gt; establishing: first keepalive from peer</span><span class="ln">establishing -&gt; established: 3 keepalives received</span><span class="ln">established -&gt; degraded: one keepalive from peer missed (3.9 s)</span><span class="ln">degraded -&gt; lost: no keepalive from peer for 6.8 s (two missed); still sending keepalives</span><span class="ln">lost -&gt; establishing: peer keepalive after link lost</span><span class="ln">establishing -&gt; established: 3 keepalives received</span></pre>
       <p>When more than one address could be the sensor, every one gets keepalives with its own counters until the first answers. <code>scapegoat lock</code> forces the choice; <code>scapegoat reset</code> starts over.</p>
     </div>
     <figure>

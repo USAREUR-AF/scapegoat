@@ -82,7 +82,7 @@ class TestWatchFormat(unittest.TestCase):
     KA = {"seq": 7, "time": "2026-11-21T11:00:50.099Z", "direction": "rx",
           "peer": "192.0.2.81:47000", "length": 10, "name": "KeepAlive",
           "ok": True, "problems": [], "hex": "4b410a000c000b000000",
-          "fields": {"transmit_counter": 12, "receive_counter": 11, "action": 0, "flags": 0},
+          "fields": {"seq": 12, "ack": 11, "ask": 0, "flags": 0},
           "summary": "tx=12 rx=11"}
 
     def test_line_uses_the_protocol_summary(self):
@@ -97,7 +97,7 @@ class TestWatchFormat(unittest.TestCase):
         out = cli.format_entry(e, fields=True, hexdump=True)
         self.assertIn("-> 192.0.2.81", out)
         self.assertIn("!! bad checksum", out)
-        self.assertIn("      transmit_counter = 12", out)
+        self.assertIn("      seq = 12", out)
         self.assertIn("      4b 41 0a 00", out)
 
     def test_no_summary_shows_up_to_six_fields(self):

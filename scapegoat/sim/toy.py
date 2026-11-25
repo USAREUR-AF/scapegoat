@@ -16,7 +16,7 @@ import socket
 import sys
 import time
 
-from scapegoat.packages.toy import SIMULATOR_FLAG, ToyProtocol, data_bytes, keepalive_bytes
+from scapegoat.packages.toy import ASK_REPLY, SIMULATOR_FLAG, ToyProtocol, data_bytes, keepalive_bytes
 
 
 class ToySim:
@@ -67,7 +67,7 @@ class ToySim:
                         if self.peer != addr:
                             self.say(f"first keepalive from {addr[0]}:{addr[1]}; answering there")
                         self.peer, self.rx = addr, m.peer_tx_counter or 0
-                        if m.fields.get("action") == 2 and not silent:
+                        if m.fields.get("ask") == ASK_REPLY and not silent:
                             self.sock.sendto(self._ka(), addr)
                             self.sent += 1
             except (socket.timeout, OSError):

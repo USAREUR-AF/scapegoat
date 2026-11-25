@@ -58,10 +58,10 @@ class SessionConfig:
     peer: str = ""
     peer_candidates: list = field(default_factory=list)
     forward: list = field(default_factory=list)
-    allow_radiate_control: bool = False
+    allow_transmit_control: bool = False
     protocol_settings: dict = field(default_factory=dict)
-    # Copied from [features] radiate_control. False hides radiate on/off everywhere.
-    radiate_feature: bool = False
+    # Copied from [features] transmit_control. False hides transmit on/off everywhere.
+    transmit_feature: bool = False
     # A plugin's address check may honour this (a peer on a private internal network).
     direct_internal_network: bool = False
     # "message": forward each message separately (a datagram may carry several);
@@ -212,17 +212,21 @@ def from_dict(data: dict, path: str = "") -> Config:
     cfg.node_role = str(data.get("node_role", "") or "").strip()
     cfg.transformers_path = str((data.get("transformers") or {}).get("path", "") or "")
     cfg.outputs = _outputs(data.get("outputs") or {}, cfg.island_rest)
-    feats = data.get("features", {}) or {}
-    if not isinstance(feats, dict):
-        raise ConfigError("[features] must be a table, e.g. [features] radiate_control = false")
-    cfg.features = {"radiate_control": _bool(feats.get("radiate_control", False),
-                                             "features.radiate_control")}
     ppath = data.get("plugin_path", []) or []
     if isinstance(ppath, str):
         ppath = [ppath]
     if not isinstance(ppath, list):
         raise ConfigError('plugin_path must be a list of directories, e.g. ["/opt/scapegoat/plugins"]')
     plugins.set_extra_dirs(ppath)
+    feats = data.get("features", {}) or {}
+    if not isinstance(feats, dict):
+        raise ConfigError("[features] must be a table, e.g. [features] transmit_control = false")
+    try:
+        feats = plugins.apply_aliases(feats, plugins.config_aliases("features"), "[features]")
+    except ValueError as exc:
+        raise ConfigError(str(exc)) from exc
+    cfg.features = {"transmit_control": _bool(feats.get("transmit_control", False),
+                                             "features.transmit_control")}
     sessions = data.get("sessions", {}) or {}
     if not isinstance(sessions, dict):
         raise ConfigError("[sessions] must be a table, e.g. [sessions.sensor]")
@@ -232,6 +236,11 @@ def from_dict(data: dict, path: str = "") -> Config:
             raise ConfigError(f"[sessions.{sid}] must be a table")
         if not s.get("protocol"):
             raise ConfigError(f"sessions.{sid}.protocol is required (for example \"toy\")")
+        try:
+            s = plugins.apply_aliases(s, plugins.config_aliases("session", str(s["protocol"])),
+                                      f"[sessions.{sid}]")
+        except ValueError as exc:
+            raise ConfigError(str(exc)) from exc
         cands = s.get("peer_candidates", []) or []
         if not isinstance(cands, list):
             raise ConfigError(f"sessions.{sid}.peer_candidates must be a list like "
@@ -253,10 +262,10 @@ def from_dict(data: dict, path: str = "") -> Config:
             peer=str(s.get("peer") or ""),
             peer_candidates=[str(c) for c in cands],
             forward=[str(f) for f in fwd],
-            allow_radiate_control=_bool(s.get("allow_radiate_control", False),
-                                        f"sessions.{sid}.allow_radiate_control"),
+            allow_transmit_control=_bool(s.get("allow_transmit_control", False),
+                                        f"sessions.{sid}.allow_transmit_control"),
             protocol_settings=dict(ps),
-            radiate_feature=cfg.features["radiate_control"],
+            transmit_feature=cfg.features["transmit_control"],
             direct_internal_network=_bool(s.get("direct_internal_network", False),
                                           f"sessions.{sid}.direct_internal_network"),
             forward_mode=str(s.get("forward_mode", "message")),
@@ -273,7 +282,7 @@ def from_dict(data: dict, path: str = "") -> Config:
             "id": sc.id, "protocol": sc.protocol, "enabled": sc.enabled,
             "local": sc.local, "peer": sc.peer,
             "peer_candidates": list(sc.peer_candidates), "forward": list(sc.forward),
-            "allow_radiate_control": sc.allow_radiate_control,
+            "allow_transmit_control": sc.allow_transmit_control,
             "protocol_settings": dict(sc.protocol_settings),
         }
     cfg.raw = dict(data)

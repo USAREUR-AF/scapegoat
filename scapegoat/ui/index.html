@@ -307,7 +307,7 @@ function renderSession(s) {
     <div>${safe.map(btn).join("")}</div>
     ${danger.length ? `<div class="danger-zone"><h4>${esc(cap(noun(s)))} controls (safety latch)</h4>
       <p class="why">${danger[0].allowed ? "These command the real " + esc(noun(s)) + ". Each is locked: tick Arm to unlock that one control for 10 seconds, press it, and type the " + esc(noun(s)) + " ID to confirm. It locks again after one use or when the time runs out."
-        : "Turned off: set allow_radiate_control = true for this session in the config and restart scapegoat."}</p>
+        : "Turned off: set allow_transmit_control = true for this session in the config and restart scapegoat."}</p>
       ${danger.map(btn).join("")}</div>` : ""}
     <h3>Session</h3>
     <button class="act life" data-sid="${esc(s.id)}" data-life="${s.enabled ? "disable" : "enable"}">${s.enabled ? "Disable" : "Enable"}</button>

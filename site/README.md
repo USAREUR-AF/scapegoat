@@ -31,10 +31,7 @@ from the tree and fails if the page says something else.
 
 | Key | On the page | Measured as |
 |---|---|---|
-| `states` | 6 | `len(STATES)` in `scapegoat/core/session.py` |
-| `formats` | 3 | `len(FORMATS)` in `scapegoat/core/outputs.py` |
-| `packages` | 0 | top-level imports under `scapegoat/` that are not in `sys.stdlib_module_names`, not `scapegoat`, and not `goat_transformers` (loaded from a configured checkout, not installed) |
-| `tests` | 171 | functions named `test*` under `tests/` |
+| (none) | | The page states no numbers: none of the project's counts is something its reader would ask about. |
 
 ## The first screen
 

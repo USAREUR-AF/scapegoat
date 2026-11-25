@@ -23,9 +23,9 @@ class FakeProtocol(Protocol):
     keepalive_interval_s = 0.2
     # Core hooks, exercised by the core tests.
     peer_request_field = "request"
-    peer_request_actions = {7: "radiate_on"}
+    peer_request_actions = {4: "transmit_on"}
     peer_status_fields = ("sensor_status",)
-    radiate_actions = frozenset({"radiate_on", "radiate_off"})
+    transmit_actions = frozenset({"transmit_on", "transmit_off"})
     sim_marker = ("sim_tag", 0xFFFFFF)
 
     def keepalive(self, link, action=0):
@@ -42,20 +42,20 @@ class FakeProtocol(Protocol):
         return Decoded("unknown", {}, False, ["unknown message"], False, None)
 
     def on_receive(self, link, msg):
-        if msg.is_keepalive and msg.fields.get("action") == 2:
+        if msg.is_keepalive and msg.fields.get("action") == 1:
             return [self.keepalive(link)]
         return []
 
     def actions(self):
         return {
-            "keepalive_now": ActionSpec("keepalive_now", "Send keepalive now", False, "KA"),
-            "request_keepalive": ActionSpec("request_keepalive", "Request KA", False, "KA 2"),
-            "radiate_on": ActionSpec("radiate_on", "Radiate ON", True, "KA 8"),
+            "ping": ActionSpec("ping", "Ping", False, "KA"),
+            "ask_reply": ActionSpec("ask_reply", "Ask for a reply", False, "KA 1"),
+            "transmit_on": ActionSpec("transmit_on", "Transmit on", True, "KA 5"),
         }
 
     def build_action(self, link, name):
-        return self.keepalive(link, {"keepalive_now": 0, "request_keepalive": 2,
-                                     "radiate_on": 8}[name])
+        return self.keepalive(link, {"ping": 0, "ask_reply": 1,
+                                     "transmit_on": 5}[name])
 
 
 class FakeSensor:

@@ -136,6 +136,32 @@ def validate_session(protocol: str, session_config) -> None:
         fn(session_config)
 
 
+def config_aliases(section: str, protocol: str | None = None) -> dict:
+    """Old config key names a plugin still accepts, as {old: new}. A plugin module sets
+    CONFIG_ALIASES = {"session": {...}, "features": {...}}. Session aliases come from the
+    session's own protocol; feature aliases from every installed plugin."""
+    names = [protocol] if protocol else installed()
+    out = {}
+    for name in names:
+        try:
+            table = getattr(load_module(name), "CONFIG_ALIASES", None) or {}
+        except Exception:
+            continue
+        out.update({str(k): str(v) for k, v in (table.get(section) or {}).items()})
+    return out
+
+
+def apply_aliases(table: dict, aliases: dict, where: str) -> dict:
+    """A copy of table with each old key renamed to its new name. Both set is an error."""
+    out = dict(table)
+    for old, new in aliases.items():
+        if old in out:
+            if new in out:
+                raise ValueError(f"{where}: set {new} or its old name {old}, not both")
+            out[new] = out.pop(old)
+    return out
+
+
 def profile_dirs() -> list:
     """Profile directories shipped by installed plugins."""
     out = []

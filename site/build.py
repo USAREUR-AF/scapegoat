@@ -46,37 +46,9 @@ def assigned(rel, name):
     raise SystemExit(f"site/build.py: {name} not found in {rel}")
 
 
-def packages():
-    """Top-level imports in scapegoat/ that are neither the standard library nor
-    scapegoat. goat_transformers is not a package to install: it is loaded from a
-    configured checkout, and without it the outputs are off."""
-    found = set()
-    for p in glob.glob(os.path.join(ROOT, "scapegoat", "**", "*.py"), recursive=True):
-        for n in ast.walk(ast.parse(open(p).read())):
-            if isinstance(n, ast.Import):
-                found |= {a.name.split(".")[0] for a in n.names}
-            elif isinstance(n, ast.ImportFrom) and n.level == 0 and n.module:
-                found.add(n.module.split(".")[0])
-    return sorted(m for m in found if m not in sys.stdlib_module_names
-                  and m not in ("scapegoat", "goat_transformers"))
-
-
-def tests():
-    total = 0
-    for p in glob.glob(os.path.join(ROOT, "tests", "**", "*.py"), recursive=True):
-        total += sum(1 for n in ast.walk(ast.parse(open(p).read()))
-                     if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef)) and n.name.startswith("test"))
-    return total
-
-
 # key -> function returning the exact text the page must show. One line per number,
 # and site/README.md says how each is measured.
-MEASURES = {
-    "states": lambda: str(len(assigned("scapegoat/core/session.py", "STATES"))),
-    "formats": lambda: str(len(assigned("scapegoat/core/outputs.py", "FORMATS"))),
-    "packages": lambda: str(len(packages())),
-    "tests": lambda: str(tests()),
-}
+MEASURES = {}
 
 
 def check_quotes(page):
