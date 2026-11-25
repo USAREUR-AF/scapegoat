@@ -7,7 +7,7 @@ sensor is answering.
 
 It also copies everything the sensor sends to other programs on the node.
 
-- Python 3.10+ standard library only. It installs on a node with no internet access.
+- Python 3.11 or newer, standard library only (3.10 reads settings written as JSON, not TOML). It installs on a node with no internet access.
 - It runs on Ubuntu 24.04 and Raspberry Pi OS, and on macOS for development.
 
 ## What the core does
