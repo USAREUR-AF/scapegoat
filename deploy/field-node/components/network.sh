@@ -148,7 +148,7 @@ network_uninstall() {
   local have c t m
   if [[ -f "$NETPLAN" ]]; then act "remove $NETPLAN" rm -f "$NETPLAN"; fi
   local cur
-  cur=$( [[ -f "$MODE_FILE" ]] && tr -d '[:space:]' < "$MODE_FILE" || true)
+  cur=$(if [[ -f "$MODE_FILE" ]]; then tr -d '[:space:]' < "$MODE_FILE" || true; fi)
   cur=${cur:-${FIELD_MODE:-${MODES%% *}}}
   local m h
   for m in $MODES; do

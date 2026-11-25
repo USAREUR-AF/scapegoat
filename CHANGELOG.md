@@ -10,3 +10,5 @@ and its simulator, the protocol conformance kit, the installer, and the field-no
 
 The core names no device type: a protocol plugin names its device, the setting that holds
 its ID and the keepalive field that carries the peer's ID (`docs/plugins.md`).
+
+Python 3.11 or newer (TOML settings); tested on 3.11 and 3.12.
